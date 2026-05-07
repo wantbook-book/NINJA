@@ -1,0 +1,152 @@
+<pr_description>
+Consider the following PR description:
+$problem_statement
+<pr_description>
+
+<entry_file>
+Start your investigation from the following entry file:
+$entry_file
+</entry_file>
+
+<instructions>
+# Task Instructions
+
+## Overview
+You are exploring a specific file entry point to find two types of locations related to the reported issue:
+- **Edit locations**: functions/methods that the fix directly modifies — these contain the buggy logic or are the primary targets of the code change.
+- **Support locations**: functions/methods that are NOT directly edited but are essential for understanding WHY the edit locations need to change (e.g., callers of the buggy function, base classes, related utilities that define key data structures or constants).
+
+Use tools to inspect code, trace call relationships, and classify each finding into the correct category.
+You are NOT limited to the entry file — follow promising leads across files.
+Final locations must be at function-level granularity: a module-level function or a class method.
+
+For each response:
+
+1. Include a `<think>` section explaining your reasoning and what you are trying to accomplish.
+2. If you still need more information, provide one or more `<tool_call>` blocks to execute.
+3. If you are ready to finish, provide a `<result>` block and also include an `exit()` tool call in the same response.
+
+## Recommended Workflow
+1. Start by examining the entry file: use `get_file_functions` and `get_file_classes` to understand its structure.
+2. Based on the issue description, identify which functions/classes look suspicious.
+3. Use `get_code_of_function` or `get_code_of_class_method` to inspect suspicious code in detail.
+4. Use `get_callers` and `get_callees` to trace call relationships:
+   - Functions that contain the buggy logic → **edit locations**
+   - Callers or related utilities that clarify the context but don't need changing → **support locations**
+5. Follow promising leads across files until you have a clear picture of both types.
+6. When confident, return the final result with both lists. If nothing is suspicious, return empty lists.
+
+## Classification Guide
+
+Ask yourself for each candidate location:
+- **Would the fix require changing this function's code?** → Edit location
+- **Does reading this function help understand the bug, but the function itself stays unchanged?** → Support location
+
+Typical edit locations:
+- The function implementing the incorrect behavior described in the PR
+- A helper called by the buggy function that also needs updating
+- An `__init__` or configuration method that sets a wrong default
+
+Typical support locations:
+- Callers that trigger the buggy function (help understand the call context)
+- Base classes or interfaces that define the contract being violated
+- Related utilities or constants that the edit locations depend on
+
+<IMPORTANT>
+- Focus on functions/methods that are MOST related to the issue symptoms.
+- When you find a location, clearly classify it as edit or support and explain why.
+- Do not explore endlessly — be efficient and focused.
+- You MUST return at least 3 edit locations and at least 3 support locations. Explore broadly enough to find both.
+- The final response must include both the `<result>` block and the `exit()` tool call.
+- If no relevant location exists for a category, return an empty list for that category.
+</IMPORTANT>
+
+## Allowed Response Formats
+
+You must choose exactly one format in each response.
+
+### Format A: Continue searching
+Use this format only when you still need more information.
+
+<think>
+...
+</think>
+<tool_call>
+{"name": "...", "arguments": {...}}
+</tool_call>
+
+You may include multiple <tool_call> blocks.
+Do not include <result> in this format.
+
+### Format B: Finish exploration
+Use this format only when you are ready to stop exploring.
+You MUST include at least 3 edit locations and at least 3 support locations in the result.
+
+<think>
+...
+</think>
+<result>
+{
+  "edit_locations": [
+    {"location": "file_path:function_name", "reason": "why this function needs to be changed to fix the issue"},
+    {"location": "file_path:ClassName.method_name", "reason": "why this method needs to be changed to fix the issue"}
+  ],
+  "support_locations": [
+    {"location": "file_path:function_name", "reason": "why reading this function helps understand the issue, even though it is not changed"},
+    {"location": "file_path:ClassName.method_name", "reason": "why this provides essential context"}
+  ]
+}
+</result>
+<tool_call>
+{"name": "exit", "arguments": {}}
+</tool_call>
+
+Do not include any non-exit tool call in this format.
+
+The `location` format must be:
+- `file_path:function_name` for module-level functions
+- `file_path:ClassName.method_name` for class methods
+
+## Examples of CORRECT Responses
+
+<example_response>
+<think>
+I should start by understanding the structure of the entry file to identify potentially suspicious functions.
+</think>
+<tool_call>
+{"name": "get_file_functions", "arguments": {"file_name": "src/client/http.py"}}
+</tool_call>
+<tool_call>
+{"name": "get_file_classes", "arguments": {"file_name": "src/client/http.py"}}
+</tool_call>
+</example_response>
+
+<example_response>
+<think>
+`send_request` contains the buggy timeout logic — this is an edit location.
+`_prepare_request` also needs updating to propagate timeout correctly — edit location.
+`load_timeout_config` returns None when the key is missing, which is the root cause — edit location.
+`RetryPolicy.execute` calls `send_request` and shows how timeout is expected to behave — support location.
+`HttpClient.__init__` sets the default timeout, clarifying the intended default — support location.
+`Session.request` is a caller that helps understand how the client is used — support location.
+</think>
+<result>
+{
+  "edit_locations": [
+    {"location": "src/client/http.py:HttpClient.send_request", "reason": "Timeout parameter is ignored when retry is enabled; this function's logic must be corrected"},
+    {"location": "src/client/http.py:HttpClient._prepare_request", "reason": "Does not propagate timeout from session config to the underlying transport; needs to be fixed"},
+    {"location": "src/config/settings.py:load_timeout_config", "reason": "Returns None instead of the default timeout value when config key is missing; this is the root cause"}
+  ],
+  "support_locations": [
+    {"location": "src/client/retry.py:RetryPolicy.execute", "reason": "Calls send_request in a retry loop; understanding its expectations clarifies why timeout must be preserved across retries"},
+    {"location": "src/client/http.py:HttpClient.__init__", "reason": "Sets the timeout attribute; reading this shows the intended default and how timeout flows into send_request"},
+    {"location": "src/client/session.py:Session.request", "reason": "Top-level caller that passes user-specified timeout down to send_request; helps verify the full call chain"}
+  ]
+}
+</result>
+<tool_call>
+{"name": "exit", "arguments": {}}
+</tool_call>
+</example_response>
+
+</instructions>

@@ -1,0 +1,64 @@
+tools:
+  - class_name: "verl.tools.code_localization.navigator_tool.FindFilesByContentTool"
+    config:
+      type: native
+    tool_schema:
+      type: "function"
+      function:
+        name: "find_files_by_content"
+        description: "Search for one or more keywords or regex patterns in repository file contents. Returns a deduplicated file list containing any matching content along with matching line snippets."
+        parameters:
+          type: "object"
+          properties:
+            keywords:
+              type: "array"
+              description: "List of keywords or regex patterns to search for in file contents"
+            file_pattern:
+              type: "string"
+              description: "File glob pattern to filter which files to search (default: '*.py')"
+          required: ["keywords"]
+
+  - class_name: "verl.tools.code_localization.navigator_tool.FindFilesByNameTool"
+    config:
+      type: native
+    tool_schema:
+      type: "function"
+      function:
+        name: "find_files_by_name"
+        description: "Match files by one or more file name or path patterns in the repository. Returns a deduplicated file list matching any of the patterns."
+        parameters:
+          type: "object"
+          properties:
+            patterns:
+              type: "array"
+              description: "List of glob patterns to match file paths (e.g., ['**/models.py', 'django/db/*.py'])"
+          required: ["patterns"]
+
+  - class_name: "verl.tools.code_localization.navigator_tool.DispatchTool"
+    config:
+      type: native
+    tool_schema:
+      type: "function"
+      function:
+        name: "dispatch"
+        description: "Dispatch Sub Agents to explore the specified entry files in depth. Each entry file will be assigned to a Sub Agent that traces caller/callee relationships and identifies suspicious functions."
+        parameters:
+          type: "object"
+          properties:
+            entries:
+              type: "array"
+              description: "List of file paths to dispatch Sub Agents to explore"
+          required: ["entries"]
+
+  - class_name: "verl.tools.code_localization.navigator_tool.ExitTool"
+    config:
+      type: native
+    tool_schema:
+      type: "function"
+      function:
+        name: "exit"
+        description: "Signal that the search is complete. Call this when you believe the confirmed suspicious locations sufficiently cover all issue symptoms."
+        parameters:
+          type: "object"
+          properties: {}
+          required: []

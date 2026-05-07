@@ -1,0 +1,2435 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Inference Output Explorer</title>
+    <style>
+      :root {
+        --bg: #f5efe4;
+        --panel: rgba(255, 255, 255, 0.92);
+        --panel-strong: #fffdf8;
+        --ink: #1d1b19;
+        --muted: #6c675f;
+        --accent: #0c6f63;
+        --accent-2: #c96f20;
+        --accent-3: #1c4e80;
+        --border: rgba(40, 34, 28, 0.12);
+        --shadow: 0 18px 45px rgba(42, 33, 24, 0.12);
+        --system: #5a6b7a;
+        --user: #0b5c9c;
+        --assistant: #2f7d32;
+        --tool: #875200;
+        --error: #a33c2f;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        color: var(--ink);
+        font-family: "IBM Plex Sans", "Avenir Next", "Segoe UI", sans-serif;
+        background:
+          radial-gradient(900px 440px at 8% -12%, rgba(12, 111, 99, 0.18), transparent 58%),
+          radial-gradient(760px 420px at 96% -10%, rgba(201, 111, 32, 0.22), transparent 52%),
+          linear-gradient(180deg, #f8f2e8, #f3ecdf 52%, #f7f3ea);
+      }
+
+      .page {
+        max-width: 1500px;
+        margin: 28px auto 56px;
+        padding: 0 18px;
+      }
+
+      .shell {
+        display: grid;
+        gap: 18px;
+      }
+
+      .hero,
+      .sidebar,
+      .panel,
+      .message-card,
+      .json-block,
+      .metric-card,
+      .list-card,
+      .table-card {
+        border: 1px solid var(--border);
+        border-radius: 22px;
+        background: var(--panel);
+        box-shadow: var(--shadow);
+        backdrop-filter: blur(18px);
+      }
+
+      .hero {
+        padding: 22px;
+      }
+
+      .title-row {
+        display: flex;
+        justify-content: space-between;
+        gap: 18px;
+        align-items: flex-start;
+      }
+
+      .title-copy {
+        display: grid;
+        gap: 8px;
+      }
+
+      h1 {
+        margin: 0;
+        font-size: clamp(28px, 4vw, 38px);
+        line-height: 1.05;
+        letter-spacing: -0.04em;
+      }
+
+      .subtitle {
+        margin: 0;
+        max-width: 860px;
+        color: var(--muted);
+        font-size: 15px;
+        line-height: 1.6;
+      }
+
+      .hero-note {
+        min-width: 240px;
+        max-width: 320px;
+        padding: 14px 16px;
+        border-radius: 18px;
+        background: linear-gradient(135deg, rgba(12, 111, 99, 0.08), rgba(201, 111, 32, 0.12));
+        color: var(--muted);
+        font-size: 13px;
+        line-height: 1.6;
+      }
+
+      .controls {
+        margin-top: 20px;
+        display: grid;
+        grid-template-columns: 1.3fr repeat(4, minmax(180px, 1fr));
+        gap: 14px;
+      }
+
+      .control {
+        display: grid;
+        gap: 8px;
+      }
+
+      label {
+        font-size: 11px;
+        letter-spacing: 0.14em;
+        text-transform: uppercase;
+        color: var(--muted);
+      }
+
+      input[type="file"],
+      select {
+        width: 100%;
+        border: 1px solid rgba(41, 36, 29, 0.14);
+        border-radius: 14px;
+        background: rgba(255, 255, 255, 0.96);
+        color: var(--ink);
+        padding: 12px 14px;
+        font-size: 14px;
+        font-family: inherit;
+      }
+
+      input[type="file"] {
+        padding: 10px 12px;
+      }
+
+      select:disabled,
+      input:disabled {
+        opacity: 0.55;
+        cursor: not-allowed;
+      }
+
+      .stats {
+        margin-top: 18px;
+        display: grid;
+        grid-template-columns: repeat(6, minmax(0, 1fr));
+        gap: 12px;
+      }
+
+      .stat-card {
+        padding: 14px 16px;
+        border-radius: 18px;
+        background: rgba(255, 255, 255, 0.7);
+        border: 1px solid rgba(41, 36, 29, 0.08);
+      }
+
+      .stat-label {
+        font-size: 11px;
+        letter-spacing: 0.14em;
+        text-transform: uppercase;
+        color: var(--muted);
+      }
+
+      .stat-value {
+        margin-top: 10px;
+        font-size: 22px;
+        font-weight: 700;
+        line-height: 1.15;
+      }
+
+      .stat-subtext {
+        margin-top: 6px;
+        color: var(--muted);
+        font-size: 12px;
+        line-height: 1.5;
+        word-break: break-word;
+      }
+
+      .error-box {
+        display: none;
+        margin-top: 16px;
+        padding: 14px 16px;
+        border-radius: 16px;
+        border: 1px solid rgba(163, 60, 47, 0.18);
+        background: rgba(163, 60, 47, 0.08);
+        color: var(--error);
+        font-size: 13px;
+        line-height: 1.55;
+      }
+
+      .layout {
+        display: grid;
+        grid-template-columns: 320px minmax(0, 1fr);
+        gap: 18px;
+        align-items: start;
+      }
+
+      .sidebar {
+        padding: 18px;
+        position: sticky;
+        top: 18px;
+      }
+
+      .sidebar-group + .sidebar-group {
+        margin-top: 18px;
+        padding-top: 18px;
+        border-top: 1px solid rgba(41, 36, 29, 0.08);
+      }
+
+      .sidebar-title {
+        margin: 0 0 10px;
+        font-size: 14px;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        color: var(--muted);
+      }
+
+      .pill-grid,
+      .file-list,
+      .kv-list {
+        display: grid;
+        gap: 10px;
+      }
+
+      .pill-row {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+      }
+
+      .pill {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 7px 10px;
+        border-radius: 999px;
+        background: rgba(12, 111, 99, 0.1);
+        color: var(--accent);
+        font-size: 12px;
+        font-weight: 600;
+      }
+
+      .pill.warn {
+        background: rgba(201, 111, 32, 0.12);
+        color: var(--accent-2);
+      }
+
+      .pill.info {
+        background: rgba(28, 78, 128, 0.12);
+        color: var(--accent-3);
+      }
+
+      .kv-item,
+      .file-item {
+        padding: 10px 12px;
+        border-radius: 14px;
+        background: rgba(255, 255, 255, 0.78);
+        border: 1px solid rgba(41, 36, 29, 0.08);
+      }
+
+      .kv-key,
+      .file-label {
+        color: var(--muted);
+        font-size: 11px;
+        letter-spacing: 0.12em;
+        text-transform: uppercase;
+      }
+
+      .kv-value,
+      .file-path {
+        margin-top: 6px;
+        font-size: 13px;
+        line-height: 1.55;
+        word-break: break-word;
+      }
+
+      .content {
+        display: grid;
+        gap: 18px;
+      }
+
+      .panel {
+        padding: 22px;
+      }
+
+      .panel-header {
+        display: flex;
+        justify-content: space-between;
+        gap: 18px;
+        align-items: flex-start;
+        margin-bottom: 18px;
+      }
+
+      .panel-title-wrap {
+        display: grid;
+        gap: 6px;
+      }
+
+      .panel-title {
+        margin: 0;
+        font-size: 24px;
+        letter-spacing: -0.02em;
+      }
+
+      .panel-subtitle {
+        margin: 0;
+        color: var(--muted);
+        font-size: 14px;
+        line-height: 1.6;
+      }
+
+      .panel-tag {
+        padding: 8px 11px;
+        border-radius: 999px;
+        background: rgba(12, 111, 99, 0.08);
+        color: var(--accent);
+        font-size: 12px;
+        font-weight: 700;
+      }
+
+      .card-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+        gap: 12px;
+      }
+
+      .metric-card {
+        padding: 16px;
+      }
+
+      .metric-label {
+        color: var(--muted);
+        font-size: 11px;
+        letter-spacing: 0.12em;
+        text-transform: uppercase;
+      }
+
+      .metric-value {
+        margin-top: 10px;
+        font-size: 26px;
+        font-weight: 700;
+        line-height: 1.1;
+      }
+
+      .metric-footnote {
+        margin-top: 8px;
+        color: var(--muted);
+        font-size: 12px;
+        line-height: 1.55;
+      }
+
+      .section-stack {
+        display: grid;
+        gap: 18px;
+      }
+
+      .table-card,
+      .list-card,
+      .json-block {
+        padding: 18px;
+      }
+
+      .section-title {
+        margin: 0 0 12px;
+        font-size: 16px;
+        letter-spacing: -0.01em;
+      }
+
+      table {
+        width: 100%;
+        border-collapse: collapse;
+      }
+
+      th,
+      td {
+        padding: 11px 10px;
+        border-bottom: 1px solid rgba(41, 36, 29, 0.08);
+        text-align: left;
+        vertical-align: top;
+        font-size: 13px;
+        line-height: 1.55;
+      }
+
+      th {
+        color: var(--muted);
+        font-size: 11px;
+        letter-spacing: 0.12em;
+        text-transform: uppercase;
+      }
+
+      tr:last-child td {
+        border-bottom: 0;
+      }
+
+      .mono,
+      pre,
+      code {
+        font-family: "IBM Plex Mono", "Source Code Pro", "Fira Code", ui-monospace, SFMono-Regular, Menlo, monospace;
+      }
+
+      pre {
+        margin: 0;
+        white-space: pre-wrap;
+        word-break: break-word;
+        line-height: 1.65;
+        font-size: 12px;
+      }
+
+      .messages {
+        display: grid;
+        gap: 14px;
+      }
+
+      .message-card {
+        overflow: hidden;
+      }
+
+      .message-card summary {
+        list-style: none;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        padding: 14px 16px;
+        font-weight: 600;
+      }
+
+      .message-card summary::-webkit-details-marker {
+        display: none;
+      }
+
+      .message-meta {
+        display: inline-flex;
+        flex-wrap: wrap;
+        align-items: center;
+        gap: 10px;
+        font-size: 13px;
+      }
+
+      .role-pill,
+      .token-pill {
+        padding: 5px 10px;
+        border-radius: 999px;
+        font-size: 11px;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        font-weight: 700;
+      }
+
+      .token-pill {
+        background: rgba(41, 36, 29, 0.06);
+        color: var(--muted);
+      }
+
+      .message-content {
+        padding: 0 16px 16px;
+      }
+
+      .role-system {
+        border-left: 5px solid var(--system);
+      }
+
+      .role-system .role-pill {
+        background: rgba(90, 107, 122, 0.14);
+        color: var(--system);
+      }
+
+      .role-user {
+        border-left: 5px solid var(--user);
+      }
+
+      .role-user .role-pill {
+        background: rgba(11, 92, 156, 0.14);
+        color: var(--user);
+      }
+
+      .role-assistant {
+        border-left: 5px solid var(--assistant);
+      }
+
+      .role-assistant .role-pill {
+        background: rgba(47, 125, 50, 0.14);
+        color: var(--assistant);
+      }
+
+      .role-tool {
+        border-left: 5px solid var(--tool);
+      }
+
+      .role-tool .role-pill {
+        background: rgba(135, 82, 0, 0.14);
+        color: var(--tool);
+      }
+
+      .trace-box {
+        margin-top: 16px;
+        padding: 15px 16px;
+        border-radius: 16px;
+        background: rgba(12, 111, 99, 0.07);
+        border: 1px solid rgba(12, 111, 99, 0.12);
+      }
+
+      .trace-title {
+        margin: 0 0 8px;
+        color: var(--accent);
+        font-size: 11px;
+        letter-spacing: 0.14em;
+        text-transform: uppercase;
+      }
+
+      .empty-state {
+        padding: 54px 24px;
+        border-radius: 24px;
+        border: 1px dashed rgba(41, 36, 29, 0.14);
+        background: rgba(255, 255, 255, 0.56);
+        text-align: center;
+        color: var(--muted);
+      }
+
+      .empty-state strong {
+        display: block;
+        color: var(--ink);
+        font-size: 18px;
+        margin-bottom: 8px;
+      }
+
+      .inline-note {
+        color: var(--muted);
+        font-size: 12px;
+        line-height: 1.55;
+      }
+
+      @media (max-width: 1180px) {
+        .controls {
+          grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+
+        .stats {
+          grid-template-columns: repeat(3, minmax(0, 1fr));
+        }
+
+        .layout {
+          grid-template-columns: 1fr;
+        }
+
+        .sidebar {
+          position: static;
+        }
+      }
+
+      @media (max-width: 760px) {
+        .page {
+          margin-top: 14px;
+          padding: 0 12px;
+        }
+
+        .hero,
+        .sidebar,
+        .panel {
+          padding: 16px;
+        }
+
+        .title-row {
+          flex-direction: column;
+        }
+
+        .controls,
+        .stats {
+          grid-template-columns: 1fr;
+        }
+
+        .message-card summary,
+        .panel-header {
+          flex-direction: column;
+          align-items: flex-start;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="page">
+      <div class="shell">
+        <header class="hero">
+          <div class="title-row">
+            <div class="title-copy">
+              <h1>Inference Output Explorer</h1>
+              <p class="subtitle">
+                Load one `evaluation/inference.py` output directory, inspect run-level artifacts,
+                switch across instance-level files, and drill into component summaries, component
+                detail traces, and the final trajectory without leaving the browser.
+              </p>
+            </div>
+            <div class="hero-note">
+              Uses the browser's folder picker and reads files locally. The directory selector works
+              best in Chromium-based browsers because it relies on `webkitdirectory`.
+            </div>
+          </div>
+
+          <div class="controls">
+            <div class="control">
+              <label for="directoryInput">Inference Output Directory</label>
+              <input id="directoryInput" type="file" webkitdirectory directory multiple />
+            </div>
+            <div class="control">
+              <label for="instanceSelect">Instance</label>
+              <select id="instanceSelect" disabled></select>
+            </div>
+            <div class="control">
+              <label for="viewSelect">View</label>
+              <select id="viewSelect" disabled>
+                <option value="run_overview">Run Overview</option>
+                <option value="trajectory">Trajectory</option>
+                <option value="sub_agent_trajectories">Sub Agent Trajectories</option>
+                <option value="name_query_detail">Name Query Detail</option>
+                <option value="component_summary">Component Summary</option>
+                <option value="component_detail">Component Detail</option>
+                <option value="default_fallback_detail">Default Fallback Detail</option>
+                <option value="raw_file">Raw File</option>
+              </select>
+            </div>
+            <div class="control">
+              <label for="componentSelect">Component</label>
+              <select id="componentSelect" disabled></select>
+            </div>
+            <div class="control">
+              <label for="rawFileSelect">Raw File</label>
+              <select id="rawFileSelect" disabled></select>
+            </div>
+          </div>
+
+          <div class="stats">
+            <div class="stat-card">
+              <div class="stat-label">Run Folder</div>
+              <div id="statRunFolder" class="stat-value">-</div>
+              <div class="stat-subtext">Selected directory root</div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-label">Files</div>
+              <div id="statFileCount" class="stat-value">0</div>
+              <div class="stat-subtext">Recognized local artifacts</div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-label">Trajectory Rows</div>
+              <div id="statTrajCount" class="stat-value">0</div>
+              <div class="stat-subtext">Rows from `traj/trajs.jsonl`</div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-label">Instances</div>
+              <div id="statInstanceCount" class="stat-value">0</div>
+              <div class="stat-subtext">Union of discovered instance ids</div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-label">Component Details</div>
+              <div id="statComponentDetailCount" class="stat-value">0</div>
+              <div class="stat-subtext">Files under `summary/components/`</div>
+            </div>
+            <div class="stat-card">
+              <div class="stat-label">Search Modes</div>
+              <div id="statSearchModes" class="stat-value">-</div>
+              <div class="stat-subtext">Observed in trajectory outputs</div>
+            </div>
+          </div>
+
+          <div id="errorBox" class="error-box"></div>
+        </header>
+
+        <div class="layout">
+          <aside class="sidebar">
+            <div class="sidebar-group">
+              <h2 class="sidebar-title">Discovered Artifacts</h2>
+              <div id="artifactPills" class="pill-row"></div>
+            </div>
+            <div class="sidebar-group">
+              <h2 class="sidebar-title">Selected Instance</h2>
+              <div id="instanceFacts" class="kv-list"></div>
+            </div>
+            <div class="sidebar-group">
+              <h2 class="sidebar-title">Instance Files</h2>
+              <div id="instanceFiles" class="file-list"></div>
+            </div>
+          </aside>
+
+          <main class="content">
+            <section id="mainPanel" class="panel">
+              <div class="empty-state">
+                <strong>Select an inference output directory</strong>
+                The explorer will detect `args.json`, `traj/trajs.jsonl`, instance summaries,
+                and per-component detail traces automatically.
+              </div>
+            </section>
+          </main>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      const directoryInput = document.getElementById("directoryInput");
+      const instanceSelect = document.getElementById("instanceSelect");
+      const viewSelect = document.getElementById("viewSelect");
+      const componentSelect = document.getElementById("componentSelect");
+      const rawFileSelect = document.getElementById("rawFileSelect");
+      const errorBox = document.getElementById("errorBox");
+      const mainPanel = document.getElementById("mainPanel");
+      const artifactPills = document.getElementById("artifactPills");
+      const instanceFacts = document.getElementById("instanceFacts");
+      const instanceFiles = document.getElementById("instanceFiles");
+      const statRunFolder = document.getElementById("statRunFolder");
+      const statFileCount = document.getElementById("statFileCount");
+      const statTrajCount = document.getElementById("statTrajCount");
+      const statInstanceCount = document.getElementById("statInstanceCount");
+      const statComponentDetailCount = document.getElementById("statComponentDetailCount");
+      const statSearchModes = document.getElementById("statSearchModes");
+
+      const state = {
+        rootLabel: "",
+        files: new Map(),
+        manifest: null,
+        args: null,
+        trajs: [],
+        trajByInstance: new Map(),
+        instanceIds: [],
+        selectedInstanceId: "",
+        selectedView: "run_overview",
+        selectedComponentId: "",
+        selectedRawPath: "",
+        cache: {
+          text: new Map(),
+          json: new Map(),
+          jsonl: new Map(),
+        },
+      };
+
+      const roleClassMap = {
+        system: "role-system",
+        user: "role-user",
+        assistant: "role-assistant",
+        tool: "role-tool",
+      };
+
+      directoryInput.addEventListener("change", async (event) => {
+        await loadDirectory(event.target.files);
+      });
+
+      instanceSelect.addEventListener("change", async () => {
+        state.selectedInstanceId = instanceSelect.value;
+        syncComponentSelection();
+        syncRawFileSelection();
+        renderSidebar();
+        await renderMainView();
+      });
+
+      viewSelect.addEventListener("change", async () => {
+        state.selectedView = viewSelect.value;
+        syncComponentSelection();
+        syncRawFileSelection();
+        await renderMainView();
+      });
+
+      componentSelect.addEventListener("change", async () => {
+        state.selectedComponentId = componentSelect.value;
+        await renderMainView();
+      });
+
+      rawFileSelect.addEventListener("change", async () => {
+        state.selectedRawPath = rawFileSelect.value;
+        await renderMainView();
+      });
+
+      async function loadDirectory(fileList) {
+        resetState();
+        clearError();
+
+        const files = Array.from(fileList || []);
+        if (!files.length) {
+          renderMainEmpty("Select an inference output directory.");
+          return;
+        }
+
+        state.rootLabel = deriveRootLabel(files);
+        for (const file of files) {
+          const relativePath = normalizeRelativePath(file);
+          if (relativePath) {
+            state.files.set(relativePath, file);
+          }
+        }
+
+        state.manifest = buildManifest(Array.from(state.files.keys()));
+
+        try {
+          await preloadArtifacts();
+          populateControls();
+          renderStats();
+          renderSidebar();
+          await renderMainView();
+        } catch (error) {
+          showError(error instanceof Error ? error.message : String(error));
+          renderMainEmpty("Failed to parse the selected directory.");
+        }
+      }
+
+      function resetState() {
+        state.rootLabel = "";
+        state.files = new Map();
+        state.manifest = null;
+        state.args = null;
+        state.trajs = [];
+        state.trajByInstance = new Map();
+        state.instanceIds = [];
+        state.selectedInstanceId = "";
+        state.selectedView = "run_overview";
+        state.selectedComponentId = "";
+        state.selectedRawPath = "";
+        state.cache.text = new Map();
+        state.cache.json = new Map();
+        state.cache.jsonl = new Map();
+      }
+
+      function deriveRootLabel(files) {
+        const first = files[0];
+        const relative = String(first.webkitRelativePath || first.name || "");
+        const root = relative.split("/").filter(Boolean)[0];
+        return root || "selected_directory";
+      }
+
+      function normalizeRelativePath(file) {
+        const relative = String(file.webkitRelativePath || file.name || "").replace(/\\/g, "/");
+        const parts = relative.split("/").filter(Boolean);
+        if (!parts.length) {
+          return "";
+        }
+        return parts.length > 1 ? parts.slice(1).join("/") : parts[0];
+      }
+
+      function buildManifest(paths) {
+        const sortedPaths = [...paths].sort((left, right) => left.localeCompare(right));
+        const manifest = {
+          allPaths: sortedPaths,
+          argsPath: "",
+          trajsPath: "",
+          trajSamplePath: "",
+          instanceSummaryPaths: new Map(),
+          componentDetailPaths: new Map(),
+          nameQueryDetailPaths: new Map(),
+          defaultFallbackDetailPaths: new Map(),
+          subAgentDetailPaths: new Map(),
+        };
+
+        for (const path of sortedPaths) {
+          if (path === "args.json") {
+            manifest.argsPath = path;
+            continue;
+          }
+          if (path === "traj/trajs.jsonl") {
+            manifest.trajsPath = path;
+            continue;
+          }
+          if (path === "traj/traj_sample.json") {
+            manifest.trajSamplePath = path;
+            continue;
+          }
+
+          let match = path.match(/^summary\/components\/([^/]+)\/([^/]+)\.json$/);
+          if (match) {
+            const instanceId = match[1];
+            const componentId = match[2];
+            if (!manifest.componentDetailPaths.has(instanceId)) {
+              manifest.componentDetailPaths.set(instanceId, new Map());
+            }
+            manifest.componentDetailPaths.get(instanceId).set(componentId, path);
+            continue;
+          }
+
+          match = path.match(/^summary\/name_query\/([^/]+)\.json$/);
+          if (match) {
+            manifest.nameQueryDetailPaths.set(match[1], path);
+            continue;
+          }
+
+          match = path.match(/^summary\/default_fallback\/([^/]+)\.json$/);
+          if (match) {
+            manifest.defaultFallbackDetailPaths.set(match[1], path);
+            continue;
+          }
+
+          match = path.match(/^traj\/sub_agents\/([^/]+)\/([^/]+)\.json$/);
+          if (match) {
+            const instanceId = match[1];
+            const fileName = match[2];
+            if (!manifest.subAgentDetailPaths.has(instanceId)) {
+              manifest.subAgentDetailPaths.set(instanceId, new Map());
+            }
+            manifest.subAgentDetailPaths.get(instanceId).set(fileName, path);
+            continue;
+          }
+
+          match = path.match(/^summary\/(.+)\.json$/);
+          if (match) {
+            manifest.instanceSummaryPaths.set(match[1], path);
+          }
+        }
+
+        return manifest;
+      }
+
+      async function preloadArtifacts() {
+        if (state.manifest.argsPath) {
+          state.args = await readJson(state.manifest.argsPath);
+        }
+
+        if (state.manifest.trajsPath) {
+          state.trajs = await readJsonl(state.manifest.trajsPath);
+        }
+
+        const instanceSet = new Set();
+        state.trajByInstance = new Map();
+
+        for (const record of state.trajs) {
+          const instanceId = extractInstanceId(record);
+          if (!instanceId) {
+            continue;
+          }
+          instanceSet.add(instanceId);
+          state.trajByInstance.set(instanceId, record);
+        }
+
+        for (const instanceId of state.manifest.instanceSummaryPaths.keys()) {
+          instanceSet.add(instanceId);
+        }
+        for (const instanceId of state.manifest.componentDetailPaths.keys()) {
+          instanceSet.add(instanceId);
+        }
+        for (const instanceId of state.manifest.nameQueryDetailPaths.keys()) {
+          instanceSet.add(instanceId);
+        }
+        for (const instanceId of state.manifest.defaultFallbackDetailPaths.keys()) {
+          instanceSet.add(instanceId);
+        }
+        for (const instanceId of state.manifest.subAgentDetailPaths.keys()) {
+          instanceSet.add(instanceId);
+        }
+
+        state.instanceIds = Array.from(instanceSet).sort((left, right) => left.localeCompare(right));
+        state.selectedInstanceId = state.instanceIds[0] || "";
+        state.selectedView = state.manifest.trajsPath ? "trajectory" : "run_overview";
+        state.selectedRawPath = state.manifest.argsPath || state.manifest.trajsPath || state.manifest.allPaths[0] || "";
+        syncComponentSelection();
+      }
+
+      async function readText(path) {
+        if (state.cache.text.has(path)) {
+          return state.cache.text.get(path);
+        }
+        const file = state.files.get(path);
+        if (!file) {
+          throw new Error(`File not found in selected directory: ${path}`);
+        }
+        const text = await file.text();
+        state.cache.text.set(path, text);
+        return text;
+      }
+
+      async function readJson(path) {
+        if (state.cache.json.has(path)) {
+          return state.cache.json.get(path);
+        }
+        const text = await readText(path);
+        let parsed;
+        try {
+          parsed = JSON.parse(text);
+        } catch (error) {
+          throw new Error(`Failed to parse JSON file ${path}: ${error.message}`);
+        }
+        state.cache.json.set(path, parsed);
+        return parsed;
+      }
+
+      async function readJsonl(path) {
+        if (state.cache.jsonl.has(path)) {
+          return state.cache.jsonl.get(path);
+        }
+        const text = await readText(path);
+        const lines = text.split(/\r?\n/).filter((line) => line.trim());
+        const parsed = [];
+        const errors = [];
+        lines.forEach((line, index) => {
+          try {
+            parsed.push(JSON.parse(line));
+          } catch (error) {
+            errors.push(`Line ${index + 1}: ${error.message}`);
+          }
+        });
+        if (errors.length) {
+          showError(`Parsed ${path} with ${errors.length} JSONL error(s). First error: ${errors[0]}`);
+        }
+        state.cache.jsonl.set(path, parsed);
+        return parsed;
+      }
+
+      function populateControls() {
+        populateInstanceSelect();
+        populateRawFileSelect();
+        populateComponentSelect();
+        viewSelect.disabled = !state.manifest || !state.manifest.allPaths.length;
+        viewSelect.value = state.selectedView;
+      }
+
+      function populateInstanceSelect() {
+        instanceSelect.innerHTML = "";
+        if (!state.instanceIds.length) {
+          instanceSelect.disabled = true;
+          const option = document.createElement("option");
+          option.textContent = "No instances detected";
+          instanceSelect.appendChild(option);
+          return;
+        }
+
+        for (const instanceId of state.instanceIds) {
+          const option = document.createElement("option");
+          option.value = instanceId;
+          option.textContent = buildInstanceLabel(instanceId);
+          instanceSelect.appendChild(option);
+        }
+        instanceSelect.disabled = false;
+        instanceSelect.value = state.selectedInstanceId;
+      }
+
+      function populateComponentSelect() {
+        componentSelect.innerHTML = "";
+        const paths = getComponentPathMap(state.selectedInstanceId);
+        const componentIds = Array.from(paths.keys()).sort((left, right) => left.localeCompare(right));
+        if (!componentIds.length) {
+          const option = document.createElement("option");
+          option.textContent = "No component details";
+          componentSelect.appendChild(option);
+          componentSelect.disabled = true;
+          return;
+        }
+
+        for (const componentId of componentIds) {
+          const option = document.createElement("option");
+          option.value = componentId;
+          option.textContent = componentId;
+          componentSelect.appendChild(option);
+        }
+
+        if (!componentIds.includes(state.selectedComponentId)) {
+          state.selectedComponentId = componentIds[0];
+        }
+        componentSelect.value = state.selectedComponentId;
+        componentSelect.disabled = state.selectedView !== "component_detail";
+      }
+
+      function populateRawFileSelect() {
+        rawFileSelect.innerHTML = "";
+        const allPaths = state.manifest ? state.manifest.allPaths : [];
+        if (!allPaths.length) {
+          const option = document.createElement("option");
+          option.textContent = "No files loaded";
+          rawFileSelect.appendChild(option);
+          rawFileSelect.disabled = true;
+          return;
+        }
+
+        if (!allPaths.includes(state.selectedRawPath)) {
+          state.selectedRawPath = allPaths[0];
+        }
+
+        for (const path of allPaths) {
+          const option = document.createElement("option");
+          option.value = path;
+          option.textContent = path;
+          rawFileSelect.appendChild(option);
+        }
+        rawFileSelect.value = state.selectedRawPath;
+        rawFileSelect.disabled = state.selectedView !== "raw_file";
+      }
+
+      function syncComponentSelection() {
+        const paths = getComponentPathMap(state.selectedInstanceId);
+        const componentIds = Array.from(paths.keys()).sort((left, right) => left.localeCompare(right));
+        state.selectedComponentId = componentIds[0] || "";
+        populateComponentSelect();
+      }
+
+      function syncRawFileSelection() {
+        populateRawFileSelect();
+      }
+
+      function renderStats() {
+        const searchModes = new Set();
+        for (const traj of state.trajs) {
+          const searchMode = String(traj.search_execution_mode || traj.search_mode || state.args?.search_mode || "").trim();
+          if (searchMode) {
+            searchModes.add(searchMode);
+          }
+        }
+
+        statRunFolder.textContent = state.rootLabel || "-";
+        statFileCount.textContent = String(state.manifest?.allPaths.length || 0);
+        statTrajCount.textContent = String(state.trajs.length);
+        statInstanceCount.textContent = String(state.instanceIds.length);
+        statComponentDetailCount.textContent = String(countComponentDetailFiles());
+        statSearchModes.textContent = searchModes.size ? Array.from(searchModes).join(", ") : "-";
+      }
+
+      function renderSidebar() {
+        renderArtifactPills();
+        renderInstanceFacts();
+        renderInstanceFiles();
+      }
+
+      function renderArtifactPills() {
+        artifactPills.innerHTML = "";
+        if (!state.manifest) {
+          return;
+        }
+
+        const pills = [
+          { label: state.manifest.argsPath ? "args.json" : "args.json missing", mode: state.manifest.argsPath ? "" : "warn" },
+          { label: state.manifest.trajsPath ? "trajs.jsonl" : "trajs.jsonl missing", mode: state.manifest.trajsPath ? "" : "warn" },
+          { label: state.manifest.trajSamplePath ? "traj_sample.json" : "traj_sample.json missing", mode: state.manifest.trajSamplePath ? "info" : "warn" },
+          { label: `${state.manifest.instanceSummaryPaths.size} instance summaries`, mode: "" },
+          { label: `${state.manifest.nameQueryDetailPaths.size} name query detail files`, mode: "info" },
+          { label: `${countComponentDetailFiles()} component detail files`, mode: "info" },
+          { label: `${state.manifest.defaultFallbackDetailPaths.size} default fallback detail files`, mode: "info" },
+        ];
+
+        for (const pill of pills) {
+          artifactPills.appendChild(createPill(pill.label, pill.mode));
+        }
+      }
+
+      function renderInstanceFacts() {
+        instanceFacts.innerHTML = "";
+        if (!state.selectedInstanceId) {
+          instanceFacts.appendChild(createKeyValueItem("status", "No instance selected"));
+          return;
+        }
+
+        const traj = getSelectedTrajectory();
+        const componentPathMap = getComponentPathMap(state.selectedInstanceId);
+        instanceFacts.appendChild(createKeyValueItem("instance_id", state.selectedInstanceId));
+        instanceFacts.appendChild(createKeyValueItem("trajectory", traj ? "available" : "missing"));
+        instanceFacts.appendChild(createKeyValueItem("summary", state.manifest.instanceSummaryPaths.get(state.selectedInstanceId) ? "available" : "missing"));
+        instanceFacts.appendChild(createKeyValueItem("name_query_detail", getNameQueryDetailPath(state.selectedInstanceId) ? "available" : "missing"));
+        instanceFacts.appendChild(createKeyValueItem("component_details", String(componentPathMap.size)));
+        instanceFacts.appendChild(createKeyValueItem("default_fallback_detail", getDefaultFallbackDetailPath(state.selectedInstanceId) ? "available" : "missing"));
+        if (traj) {
+            instanceFacts.appendChild(createKeyValueItem("repo", String(traj.repo || "-")));
+            instanceFacts.appendChild(createKeyValueItem("search_mode", String(traj.search_execution_mode || traj.search_mode || state.args?.search_mode || "-")));
+            const subTrajs = Array.isArray(traj.sub_agent_trajectories) ? traj.sub_agent_trajectories : [];
+            const subAgentFileMap = getSubAgentPathMap(state.selectedInstanceId);
+            const subAgentCount = Math.max(subTrajs.length, subAgentFileMap.size);
+            if (subAgentCount > 0) {
+                instanceFacts.appendChild(createKeyValueItem("sub_agents", String(subAgentCount)));
+                if (subAgentFileMap.size > 0) {
+                    instanceFacts.appendChild(createKeyValueItem("sub_agent_files", String(subAgentFileMap.size)));
+                }
+            }
+        }
+      }
+
+      function renderInstanceFiles() {
+        instanceFiles.innerHTML = "";
+        if (!state.selectedInstanceId) {
+          instanceFiles.appendChild(createFileItem("status", "No instance selected"));
+          return;
+        }
+
+        const traj = getSelectedTrajectory();
+        if (traj && state.manifest.trajsPath) {
+          instanceFiles.appendChild(createFileItem("trajectory row", state.manifest.trajsPath));
+        }
+
+        const summaryPath = state.manifest.instanceSummaryPaths.get(state.selectedInstanceId);
+        if (summaryPath) {
+          instanceFiles.appendChild(createFileItem("component summary", summaryPath));
+        }
+
+        const nameQueryDetailPath = getNameQueryDetailPath(state.selectedInstanceId);
+        if (nameQueryDetailPath) {
+          instanceFiles.appendChild(createFileItem("name query detail", nameQueryDetailPath));
+        }
+
+        const componentPathMap = getComponentPathMap(state.selectedInstanceId);
+        if (componentPathMap.size) {
+          for (const [componentId, path] of Array.from(componentPathMap.entries()).sort((a, b) => a[0].localeCompare(b[0]))) {
+            instanceFiles.appendChild(createFileItem(componentId, path));
+          }
+        }
+
+        const defaultFallbackDetailPath = getDefaultFallbackDetailPath(state.selectedInstanceId);
+        if (defaultFallbackDetailPath) {
+          instanceFiles.appendChild(createFileItem("default fallback detail", defaultFallbackDetailPath));
+        }
+
+        const subAgentPathMap = getSubAgentPathMap(state.selectedInstanceId);
+        if (subAgentPathMap.size) {
+          for (const [name, path] of Array.from(subAgentPathMap.entries()).sort((a, b) => a[0].localeCompare(b[0]))) {
+            instanceFiles.appendChild(createFileItem(`sub_agent: ${name}`, path));
+          }
+        }
+
+        if (!instanceFiles.children.length) {
+          instanceFiles.appendChild(createFileItem("status", "No instance-specific files detected"));
+        }
+      }
+
+      async function renderMainView() {
+        if (!state.manifest || !state.manifest.allPaths.length) {
+          renderMainEmpty("Select an inference output directory.");
+          return;
+        }
+
+        clearError();
+        try {
+          if (state.selectedView === "run_overview") {
+            await renderRunOverview();
+            return;
+          }
+          if (state.selectedView === "trajectory") {
+            await renderTrajectoryView();
+            return;
+          }
+          if (state.selectedView === "sub_agent_trajectories") {
+            await renderSubAgentTrajectoriesView();
+            return;
+          }
+          if (state.selectedView === "name_query_detail") {
+            await renderNameQueryDetailView();
+            return;
+          }
+          if (state.selectedView === "component_summary") {
+            await renderComponentSummaryView();
+            return;
+          }
+          if (state.selectedView === "component_detail") {
+            await renderComponentDetailView();
+            return;
+          }
+          if (state.selectedView === "default_fallback_detail") {
+            await renderDefaultFallbackDetailView();
+            return;
+          }
+          if (state.selectedView === "raw_file") {
+            await renderRawFileView();
+            return;
+          }
+          renderMainEmpty("Unsupported view.");
+        } catch (error) {
+          showError(error instanceof Error ? error.message : String(error));
+          renderMainEmpty("Failed to render the selected artifact.");
+        }
+      }
+
+      async function renderRunOverview() {
+        const panel = createPanelScaffold(
+          "Run Overview",
+          "High-level inventory for the selected inference output directory.",
+          state.rootLabel || "run"
+        );
+
+        const metrics = createCardGrid([
+          {
+            label: "Model",
+            value: String(state.args?.model_name || "-"),
+            footnote: `backend: ${String(state.args?.model_backend || "-")}`,
+          },
+          {
+            label: "Search Mode",
+            value: String(state.args?.search_mode || inferPrimarySearchMode() || "-"),
+            footnote: `strategy: ${String(state.args?.bfs_component_search_strategy || "-")}`,
+          },
+          {
+            label: "Parallelism",
+            value: String(state.args?.bfs_component_parallelism ?? "-"),
+            footnote: `max components: ${String(state.args?.bfs_max_components_to_check ?? "-")}`,
+          },
+          {
+            label: "Trajectory Rows",
+            value: String(state.trajs.length),
+            footnote: `instances: ${state.instanceIds.length}`,
+          },
+        ]);
+        panel.body.appendChild(metrics);
+
+        if (state.args) {
+          panel.body.appendChild(
+            createTableCard(
+              "args.json",
+              ["key", "value"],
+              summarizeArgs(state.args)
+            )
+          );
+        }
+
+        const rows = state.instanceIds.map((instanceId) => {
+          const traj = state.trajByInstance.get(instanceId);
+          const detailCount = getComponentPathMap(instanceId).size;
+          return {
+            instance_id: instanceId,
+            trajectory: traj ? "yes" : "no",
+            summary: state.manifest.instanceSummaryPaths.get(instanceId) ? "yes" : "no",
+            component_details: String(detailCount),
+            fail_ratio: formatMaybeNumber(traj?.fail_ratio),
+          };
+        });
+        panel.body.appendChild(
+          createTableCard(
+            "Instances",
+            ["instance_id", "trajectory", "summary", "component_details", "fail_ratio"],
+            rows
+          )
+        );
+
+        panel.body.appendChild(
+          createListCard(
+            "Key Files",
+            [
+              `args.json: ${state.manifest.argsPath || "missing"}`,
+              `traj/trajs.jsonl: ${state.manifest.trajsPath || "missing"}`,
+              `traj/traj_sample.json: ${state.manifest.trajSamplePath || "missing"}`,
+              `summary files: ${state.manifest.instanceSummaryPaths.size}`,
+              `component detail files: ${countComponentDetailFiles()}`,
+            ]
+          )
+        );
+
+        mountPanel(panel.root);
+      }
+
+      async function renderTrajectoryView() {
+        const traj = getSelectedTrajectory();
+        if (!traj) {
+          renderMainEmpty("This instance has no trajectory row in `traj/trajs.jsonl`.");
+          return;
+        }
+
+        const messages = Array.isArray(traj.messages) ? traj.messages : [];
+        const totalTokens = sumMessageTokens(messages);
+        const toolTokens = sumMessageTokens(messages, "tool");
+        const assistantTokens = sumMessageTokens(messages, "assistant");
+        const traceLocs = extractTraceLocs(messages);
+        const panel = createPanelScaffold(
+          "Trajectory",
+          "Main-session conversation saved to `traj/trajs.jsonl`.",
+          state.selectedInstanceId
+        );
+
+        panel.body.appendChild(
+          createCardGrid([
+            {
+              label: "Messages",
+              value: String(messages.length),
+              footnote: `system/user/assistant/tool combined`,
+            },
+            {
+              label: "Total Tokens",
+              value: String(totalTokens),
+              footnote: `tool: ${toolTokens} | assistant: ${assistantTokens}`,
+            },
+            {
+              label: "Fail Ratio",
+              value: formatMaybeNumber(traj.fail_ratio),
+              footnote: `search mode: ${String(traj.search_execution_mode || traj.search_mode || state.args?.search_mode || "-")}`,
+            },
+            {
+              label: "Sub Agents",
+              value: String(Math.max(
+                Array.isArray(traj.sub_agent_trajectories) ? traj.sub_agent_trajectories.length : 0,
+                getSubAgentPathMap(state.selectedInstanceId).size
+              )),
+              footnote: `switch to "Sub Agent Trajectories" view for details`,
+            },
+            {
+              label: "Repo",
+              value: String(traj.repo || "-"),
+              footnote: `base commit: ${String(traj.base_commit || "-")}`,
+            },
+          ])
+        );
+
+        panel.body.appendChild(
+          createTableCard(
+            "Trajectory Metadata",
+            ["key", "value"],
+            [
+              { key: "instance_id", value: String(extractInstanceId(traj) || "-") },
+              { key: "ground_truth", value: formatGroundTruth(extractGroundTruth(traj)) },
+              { key: "component_summary_path", value: String(traj.component_summary_path || "-") },
+            ]
+          )
+        );
+
+        if (traceLocs) {
+          panel.body.appendChild(createTraceBox(traceLocs));
+        }
+
+        panel.body.appendChild(createMessagesSection(messages));
+        mountPanel(panel.root);
+      }
+
+      async function renderSubAgentTrajectoriesView() {
+        const traj = getSelectedTrajectory();
+        const subAgentFileMap = getSubAgentPathMap(state.selectedInstanceId);
+
+        // Build sub-agent data: prefer loading from separate JSON files,
+        // fall back to inline JSONL summaries if files unavailable.
+        const subTrajs = [];
+        if (subAgentFileMap.size > 0) {
+          // Load full sub-agent trajectories from individual JSON files
+          for (const [name, path] of Array.from(subAgentFileMap.entries()).sort((a, b) => a[0].localeCompare(b[0]))) {
+            try {
+              const detail = await readJson(path);
+              subTrajs.push(detail);
+            } catch (err) {
+              subTrajs.push({ entry_file: name, error: `Failed to load: ${err.message}`, messages: [], suspicious: [] });
+            }
+          }
+        } else if (traj && Array.isArray(traj.sub_agent_trajectories)) {
+          // Fall back: try loading from sub_agent_detail_path in each summary,
+          // otherwise use the inline summary as-is (no messages)
+          for (const summary of traj.sub_agent_trajectories) {
+            if (summary.sub_agent_detail_path) {
+              try {
+                const detail = await readJson(summary.sub_agent_detail_path);
+                subTrajs.push(detail);
+                continue;
+              } catch (_) {
+                // Fall through to use inline summary
+              }
+            }
+            subTrajs.push(summary);
+          }
+        }
+
+        if (!subTrajs.length) {
+          renderMainEmpty("This instance has no sub-agent trajectories saved.");
+          return;
+        }
+
+        const panel = createPanelScaffold(
+          "Sub Agent Trajectories",
+          "Per-entry sub-agent conversation traces dispatched during multi-agent search.",
+          state.selectedInstanceId
+        );
+
+        // Summary cards
+        const totalSubAgents = subTrajs.length;
+        let totalSubToolCalls = 0;
+        let totalSubFailed = 0;
+        let totalSubRepeated = 0;
+        let totalSubTokens = 0;
+        let totalSuspicious = 0;
+
+        for (const st of subTrajs) {
+          const stats = st.sub_agent_stats || {};
+          totalSubToolCalls += Number(stats.total_tool_calls || 0);
+          totalSubFailed += Number(stats.failed_tool_calls || 0);
+          totalSubRepeated += Number(stats.repeated_tool_calls || 0);
+          totalSuspicious += Array.isArray(st.suspicious) ? st.suspicious.length : 0;
+          const msgs = Array.isArray(st.messages) ? st.messages : [];
+          totalSubTokens += sumMessageTokens(msgs);
+        }
+
+        panel.body.appendChild(
+          createCardGrid([
+            {
+              label: "Sub Agents",
+              value: String(totalSubAgents),
+              footnote: `total dispatch calls`,
+            },
+            {
+              label: "Total Sub Tokens",
+              value: String(totalSubTokens),
+              footnote: `avg: ${totalSubAgents > 0 ? Math.round(totalSubTokens / totalSubAgents) : 0}`,
+            },
+            {
+              label: "Sub Tool Calls",
+              value: String(totalSubToolCalls),
+              footnote: `failed: ${totalSubFailed} | repeated: ${totalSubRepeated}`,
+            },
+            {
+              label: "Suspicious Found",
+              value: String(totalSuspicious),
+              footnote: `avg: ${totalSubAgents > 0 ? (totalSuspicious / totalSubAgents).toFixed(1) : 0}`,
+            },
+          ])
+        );
+
+        // Summary table of all sub-agents
+        const summaryRows = subTrajs.map((st, idx) => {
+          const stats = st.sub_agent_stats || {};
+          const msgs = Array.isArray(st.messages) ? st.messages : [];
+          return {
+            "#": String(idx + 1),
+            entry_file: String(st.entry_file || "-"),
+            messages: String(msgs.length),
+            tokens: String(sumMessageTokens(msgs)),
+            tool_calls: String(stats.total_tool_calls ?? "-"),
+            failed: String(stats.failed_tool_calls ?? "-"),
+            repeated: String(stats.repeated_tool_calls ?? "-"),
+            suspicious: String(Array.isArray(st.suspicious) ? st.suspicious.length : 0),
+            error: st.error ? String(st.error).substring(0, 80) : "-",
+          };
+        });
+
+        panel.body.appendChild(
+          createTableCard(
+            "Sub Agent Overview",
+            ["#", "entry_file", "messages", "tokens", "tool_calls", "failed", "repeated", "suspicious", "error"],
+            summaryRows
+          )
+        );
+
+        // Render each sub-agent's messages in collapsible sections
+        subTrajs.forEach((st, idx) => {
+          const entryFile = String(st.entry_file || "unknown");
+          const msgs = Array.isArray(st.messages) ? st.messages : [];
+          const suspicious = Array.isArray(st.suspicious) ? st.suspicious : [];
+          const stats = st.sub_agent_stats || {};
+
+          const section = document.createElement("section");
+          section.className = "list-card";
+
+          const heading = document.createElement("h3");
+          heading.className = "section-title";
+          heading.textContent = `Sub Agent #${idx + 1}: ${entryFile}`;
+          section.appendChild(heading);
+
+          // Sub-agent stats pills
+          const pillRow = document.createElement("div");
+          pillRow.className = "pill-row";
+          pillRow.style.marginBottom = "12px";
+          pillRow.appendChild(createPill(`${msgs.length} msgs`));
+          pillRow.appendChild(createPill(`${sumMessageTokens(msgs)} tokens`, "info"));
+          pillRow.appendChild(createPill(`${stats.total_tool_calls ?? 0} calls`, "info"));
+          if (Number(stats.failed_tool_calls) > 0) {
+            pillRow.appendChild(createPill(`${stats.failed_tool_calls} failed`, "warn"));
+          }
+          if (suspicious.length > 0) {
+            pillRow.appendChild(createPill(`${suspicious.length} suspicious`));
+          }
+          if (st.error) {
+            pillRow.appendChild(createPill("error", "warn"));
+          }
+          section.appendChild(pillRow);
+
+          // Explored locations
+          const explored = Array.isArray(st.explored) ? st.explored : [];
+          if (explored.length > 0) {
+            const explBox = document.createElement("div");
+            explBox.className = "trace-box";
+            explBox.style.marginBottom = "12px";
+            const explTitle = document.createElement("h3");
+            explTitle.className = "trace-title";
+            explTitle.textContent = "Explored Locations";
+            explBox.appendChild(explTitle);
+            const explPre = document.createElement("pre");
+            explPre.textContent = explored.join("\n");
+            explBox.appendChild(explPre);
+            section.appendChild(explBox);
+          }
+
+          // Suspicious locations
+          if (suspicious.length > 0) {
+            const susBox = document.createElement("div");
+            susBox.className = "trace-box";
+            susBox.style.marginBottom = "12px";
+            const susTitle = document.createElement("h3");
+            susTitle.className = "trace-title";
+            susTitle.textContent = "Suspicious Locations";
+            susBox.appendChild(susTitle);
+            const susPre = document.createElement("pre");
+            susPre.textContent = suspicious
+              .map((s) => `${s.location || "-"}: ${s.reason || "-"}`)
+              .join("\n");
+            susBox.appendChild(susPre);
+            section.appendChild(susBox);
+          }
+
+          // Messages (collapsed by default for sub-agents)
+          if (msgs.length > 0) {
+            const messagesWrapper = document.createElement("details");
+            const messagesSummary = document.createElement("summary");
+            messagesSummary.style.cursor = "pointer";
+            messagesSummary.style.fontWeight = "600";
+            messagesSummary.style.fontSize = "14px";
+            messagesSummary.style.marginBottom = "10px";
+            messagesSummary.textContent = `Show ${msgs.length} messages`;
+            messagesWrapper.appendChild(messagesSummary);
+
+            const msgList = document.createElement("div");
+            msgList.className = "messages";
+            msgs.forEach((msg, msgIdx) => {
+              msgList.appendChild(createMessageCard(msg, msgIdx));
+            });
+            messagesWrapper.appendChild(msgList);
+            section.appendChild(messagesWrapper);
+          }
+
+          panel.body.appendChild(section);
+        });
+
+        mountPanel(panel.root);
+      }
+
+      async function renderNameQueryDetailView() {
+        const path = getNameQueryDetailPath(state.selectedInstanceId);
+        if (!path) {
+          renderMainEmpty("This instance has no `summary/name_query/<instance_id>.json` file.");
+          return;
+        }
+
+        const payload = await readJson(path);
+        const messages = Array.isArray(payload.messages) ? payload.messages : [];
+        const nameQuery = payload.name_query && typeof payload.name_query === "object" ? payload.name_query : {};
+        const panel = createPanelScaffold(
+          "Name Query Detail",
+          "Issue-guided file/class/function name planning trace saved separately from `traj/trajs.jsonl`.",
+          path
+        );
+
+        panel.body.appendChild(
+          createCardGrid([
+            {
+              label: "Messages",
+              value: String(messages.length),
+              footnote: `usage tokens: ${String(payload.usage?.total_tokens ?? "-")}`,
+            },
+            {
+              label: "Files",
+              value: String(Array.isArray(nameQuery.file_names) ? nameQuery.file_names.length : 0),
+              footnote: formatArray(nameQuery.file_names),
+            },
+            {
+              label: "Classes",
+              value: String(Array.isArray(nameQuery.class_names) ? nameQuery.class_names.length : 0),
+              footnote: formatArray(nameQuery.class_names),
+            },
+            {
+              label: "Functions",
+              value: String(Array.isArray(nameQuery.function_names) ? nameQuery.function_names.length : 0),
+              footnote: formatArray(nameQuery.function_names),
+            },
+          ])
+        );
+
+        panel.body.appendChild(
+          createTableCard(
+            "Name Query Fields",
+            ["key", "value"],
+            [
+              { key: "file_names", value: formatArray(nameQuery.file_names) },
+              { key: "class_names", value: formatArray(nameQuery.class_names) },
+              { key: "function_names", value: formatArray(nameQuery.function_names) },
+            ]
+          )
+        );
+        panel.body.appendChild(createMessagesSection(messages, "Name Query Messages"));
+        panel.body.appendChild(createJsonBlock("Raw Name Query Detail JSON", payload));
+        mountPanel(panel.root);
+      }
+
+      async function renderComponentSummaryView() {
+        const path = state.manifest.instanceSummaryPaths.get(state.selectedInstanceId);
+        if (!path) {
+          renderMainEmpty("This instance has no `summary/<instance_id>.json` file.");
+          return;
+        }
+
+        const payload = await readJson(path);
+        const componentRows = summarizeComponentSummaryPayload(payload);
+        const panel = createPanelScaffold(
+          "Component Summary",
+          "Per-instance component summaries saved under `summary/<instance_id>.json`.",
+          path
+        );
+
+        panel.body.appendChild(
+          createCardGrid([
+            {
+              label: "Components",
+              value: String(componentRows.length),
+              footnote: `saved summary entries`,
+            },
+            {
+              label: "Repo",
+              value: String(payload.repo || "-"),
+              footnote: `instance: ${String(payload.instance_id || "-")}`,
+            },
+            {
+              label: "Base Commit",
+              value: String(payload.base_commit || "-"),
+              footnote: `updated: ${String(payload.updated_at || "-")}`,
+            },
+            {
+              label: "Source File",
+              value: String(payload.component_graph_file ? basename(payload.component_graph_file) : "-"),
+              footnote: String(payload.component_graph_file || "-"),
+            },
+          ])
+        );
+
+        panel.body.appendChild(
+          createTableCard(
+            "Component Rows",
+            ["component_id", "checked_nodes", "total_nodes", "summary_available", "functionality_summary"],
+            componentRows
+          )
+        );
+
+        panel.body.appendChild(
+          createJsonBlock("Raw Summary JSON", payload)
+        );
+        mountPanel(panel.root);
+      }
+
+      async function renderComponentDetailView() {
+        const componentPathMap = getComponentPathMap(state.selectedInstanceId);
+        const path = componentPathMap.get(state.selectedComponentId);
+        if (!path) {
+          renderMainEmpty("This instance has no component detail file to inspect.");
+          return;
+        }
+
+        const payload = await readJson(path);
+        const messages = Array.isArray(payload.messages) ? payload.messages : [];
+        const summary = payload.component_summary || {};
+        const summaryTrace = payload.component_summary_trace || {};
+        const summaryTraceMessages = Array.isArray(summaryTrace.summary_messages) ? summaryTrace.summary_messages : [];
+        const mergeTraceMessages = Array.isArray(summaryTrace.merge_messages) ? summaryTrace.merge_messages : [];
+        const searchResult = payload.component_search_result || {};
+        const panel = createPanelScaffold(
+          "Component Detail",
+          "Full raw trace for one component search session saved under `summary/components/<instance_id>/<component_id>.json`.",
+          path
+        );
+
+        panel.body.appendChild(
+          createCardGrid([
+            {
+              label: "Component",
+              value: String(payload.component_id || state.selectedComponentId || "-"),
+              footnote: `search order: ${String(payload.search_order ?? "-")}`,
+            },
+            {
+              label: "Messages",
+              value: String(messages.length),
+              footnote: `tool fail ratio: ${formatMaybeNumber(payload.fail_ratio)}`,
+            },
+            {
+              label: "Summary",
+              value: summary.functionality_summary ? "available" : "missing",
+              footnote: `saved: ${payload.component_summary_saved ? "yes" : "no"}`,
+            },
+            {
+              label: "Summary Trace",
+              value: String(summaryTraceMessages.length),
+              footnote: `merge messages: ${String(mergeTraceMessages.length)}`,
+            },
+            {
+              label: "Checked Nodes",
+              value: String(Array.isArray(searchResult.checked_node_ids) ? searchResult.checked_node_ids.length : 0),
+              footnote: String(Array.isArray(searchResult.entry_node_ids) && searchResult.entry_node_ids.length ? searchResult.entry_node_ids[0] : "-"),
+            },
+          ])
+        );
+
+        panel.body.appendChild(
+          createTableCard(
+            "Component Fields",
+            ["key", "value"],
+            [
+              { key: "functionality_summary", value: String(summary.functionality_summary || "-") },
+              { key: "summary_reused", value: String(Boolean(summaryTrace.reused_existing_summary)) },
+              { key: "summary_trace_messages", value: String(summaryTraceMessages.length) },
+              { key: "merge_trace_messages", value: String(mergeTraceMessages.length) },
+              { key: "trace_locs_available", value: searchResult.trace_locs ? "yes" : "no" },
+              { key: "checked_node_ids", value: formatArray(searchResult.checked_node_ids) },
+              { key: "suspected_locations", value: formatLikelyLocations(searchResult.suspected_locations) },
+              { key: "stop_reason", value: String(searchResult.stop_reason || "-") },
+            ]
+          )
+        );
+
+        if (searchResult.trace_locs) {
+          panel.body.appendChild(createTraceBox(searchResult.trace_locs, "Component <trace_locs>"));
+        }
+
+        panel.body.appendChild(createMessagesSection(messages, "Search Messages"));
+        panel.body.appendChild(
+          createMessagesSection(
+            summaryTraceMessages,
+            "Summary Trace Messages",
+            "No summary-generation trace saved in this artifact."
+          )
+        );
+        if (mergeTraceMessages.length || summaryTrace.reused_existing_summary !== undefined) {
+          panel.body.appendChild(
+            createMessagesSection(
+              mergeTraceMessages,
+              "Summary Merge Trace Messages",
+              summaryTrace.reused_existing_summary
+                ? "This component reused an existing saved summary, so no merge trace was generated."
+                : "No summary-merge trace saved in this artifact."
+            )
+          );
+        }
+        panel.body.appendChild(createJsonBlock("Raw Component Detail JSON", payload));
+        mountPanel(panel.root);
+      }
+
+      async function renderDefaultFallbackDetailView() {
+        const path = getDefaultFallbackDetailPath(state.selectedInstanceId);
+        if (!path) {
+          renderMainEmpty("This instance has no `summary/default_fallback/<instance_id>.json` file.");
+          return;
+        }
+
+        const payload = await readJson(path);
+        const messages = Array.isArray(payload.messages) ? payload.messages : [];
+        const traceLocs = String(payload.trace_locs || "");
+        const panel = createPanelScaffold(
+          "Default Fallback Detail",
+          "Default repo-search fallback trace saved separately from `traj/trajs.jsonl`.",
+          path
+        );
+
+        panel.body.appendChild(
+          createCardGrid([
+            {
+              label: "Messages",
+              value: String(messages.length),
+              footnote: `usage tokens: ${String(payload.usage?.total_tokens ?? "-")}`,
+            },
+            {
+              label: "Tool Calls",
+              value: String(payload.tool_execute_count ?? "-"),
+              footnote: `errors: ${String(payload.tool_error_count ?? "-")}`,
+            },
+            {
+              label: "Repeat Rate",
+              value: formatMaybeNumber(payload.tool_call_stats?.repeat_rate),
+              footnote: `distinct: ${String(payload.tool_call_stats?.distinct_tool_calls ?? "-")}`,
+            },
+            {
+              label: "Fail Ratio",
+              value: formatMaybeNumber(payload.fail_ratio),
+              footnote: `search mode: ${String(payload.search_mode || "default")}`,
+            },
+          ])
+        );
+
+        if (traceLocs) {
+          panel.body.appendChild(createTraceBox(traceLocs, "Default Fallback <trace_locs>"));
+        }
+        panel.body.appendChild(createMessagesSection(messages, "Default Fallback Messages"));
+        panel.body.appendChild(createJsonBlock("Raw Default Fallback Detail JSON", payload));
+        mountPanel(panel.root);
+      }
+
+      async function renderRawFileView() {
+        const path = state.selectedRawPath;
+        if (!path) {
+          renderMainEmpty("Choose a file to inspect.");
+          return;
+        }
+
+        const text = await readText(path);
+        const panel = createPanelScaffold(
+          "Raw File",
+          "Direct file viewer for any artifact discovered inside the selected inference output directory.",
+          path
+        );
+
+        const file = state.files.get(path);
+        panel.body.appendChild(
+          createCardGrid([
+            {
+              label: "Path",
+              value: basename(path),
+              footnote: path,
+            },
+            {
+              label: "Size",
+              value: formatBytes(file?.size || 0),
+              footnote: `relative path inside selected folder`,
+            },
+            {
+              label: "Type",
+              value: inferFileType(path),
+              footnote: `browser local file`,
+            },
+          ])
+        );
+
+        const maybeJson = tryPrettyJson(text);
+        panel.body.appendChild(
+          createPreformattedBlock("File Contents", maybeJson ?? text)
+        );
+        mountPanel(panel.root);
+      }
+
+      function createPanelScaffold(title, subtitle, tag) {
+        const root = document.createElement("section");
+        root.className = "panel";
+
+        const header = document.createElement("div");
+        header.className = "panel-header";
+
+        const titleWrap = document.createElement("div");
+        titleWrap.className = "panel-title-wrap";
+
+        const titleEl = document.createElement("h2");
+        titleEl.className = "panel-title";
+        titleEl.textContent = title;
+
+        const subtitleEl = document.createElement("p");
+        subtitleEl.className = "panel-subtitle";
+        subtitleEl.textContent = subtitle;
+
+        titleWrap.appendChild(titleEl);
+        titleWrap.appendChild(subtitleEl);
+
+        const tagEl = document.createElement("div");
+        tagEl.className = "panel-tag mono";
+        tagEl.textContent = tag || "-";
+
+        header.appendChild(titleWrap);
+        header.appendChild(tagEl);
+        root.appendChild(header);
+
+        const body = document.createElement("div");
+        body.className = "section-stack";
+        root.appendChild(body);
+        return { root, body };
+      }
+
+      function createCardGrid(cards) {
+        const wrapper = document.createElement("div");
+        wrapper.className = "card-grid";
+        for (const card of cards) {
+          const item = document.createElement("article");
+          item.className = "metric-card";
+
+          const label = document.createElement("div");
+          label.className = "metric-label";
+          label.textContent = card.label;
+
+          const value = document.createElement("div");
+          value.className = "metric-value";
+          value.textContent = card.value;
+
+          const footnote = document.createElement("div");
+          footnote.className = "metric-footnote";
+          footnote.textContent = card.footnote || "";
+
+          item.appendChild(label);
+          item.appendChild(value);
+          item.appendChild(footnote);
+          wrapper.appendChild(item);
+        }
+        return wrapper;
+      }
+
+      function createTableCard(title, columns, rows) {
+        const section = document.createElement("section");
+        section.className = "table-card";
+
+        const heading = document.createElement("h3");
+        heading.className = "section-title";
+        heading.textContent = title;
+        section.appendChild(heading);
+
+        if (!rows.length) {
+          const note = document.createElement("div");
+          note.className = "inline-note";
+          note.textContent = "No rows available.";
+          section.appendChild(note);
+          return section;
+        }
+
+        const table = document.createElement("table");
+        const thead = document.createElement("thead");
+        const headRow = document.createElement("tr");
+        columns.forEach((column) => {
+          const th = document.createElement("th");
+          th.textContent = column.replaceAll("_", " ");
+          headRow.appendChild(th);
+        });
+        thead.appendChild(headRow);
+
+        const tbody = document.createElement("tbody");
+        rows.forEach((row) => {
+          const tr = document.createElement("tr");
+          columns.forEach((column) => {
+            const td = document.createElement("td");
+            td.textContent = formatCellValue(row[column]);
+            tr.appendChild(td);
+          });
+          tbody.appendChild(tr);
+        });
+
+        table.appendChild(thead);
+        table.appendChild(tbody);
+        section.appendChild(table);
+        return section;
+      }
+
+      function createListCard(title, items) {
+        const section = document.createElement("section");
+        section.className = "list-card";
+        const heading = document.createElement("h3");
+        heading.className = "section-title";
+        heading.textContent = title;
+        section.appendChild(heading);
+
+        const list = document.createElement("div");
+        list.className = "file-list";
+        items.forEach((item) => {
+          list.appendChild(createFileItem("item", item));
+        });
+        section.appendChild(list);
+        return section;
+      }
+
+      function createJsonBlock(title, value) {
+        return createPreformattedBlock(title, JSON.stringify(value, null, 2));
+      }
+
+      function createPreformattedBlock(title, text) {
+        const section = document.createElement("section");
+        section.className = "json-block";
+        const heading = document.createElement("h3");
+        heading.className = "section-title";
+        heading.textContent = title;
+        const pre = document.createElement("pre");
+        pre.textContent = text;
+        section.appendChild(heading);
+        section.appendChild(pre);
+        return section;
+      }
+
+      function createMessagesSection(messages, title = "Messages", emptyText = "No messages saved in this artifact.") {
+        const section = document.createElement("section");
+        section.className = "list-card";
+        const heading = document.createElement("h3");
+        heading.className = "section-title";
+        heading.textContent = title;
+        section.appendChild(heading);
+
+        if (!messages.length) {
+          const note = document.createElement("div");
+          note.className = "inline-note";
+          note.textContent = emptyText;
+          section.appendChild(note);
+          return section;
+        }
+
+        const list = document.createElement("div");
+        list.className = "messages";
+        messages.forEach((message, index) => {
+          list.appendChild(createMessageCard(message, index));
+        });
+        section.appendChild(list);
+        return section;
+      }
+
+      function createTraceBox(traceLocs, titleText = "Latest <trace_locs>") {
+        const box = document.createElement("section");
+        box.className = "trace-box";
+        const title = document.createElement("h3");
+        title.className = "trace-title";
+        title.textContent = titleText;
+        const pre = document.createElement("pre");
+        pre.textContent = traceLocs;
+        box.appendChild(title);
+        box.appendChild(pre);
+        return box;
+      }
+
+      function createMessageCard(message, index) {
+        const role = String(message.role || "system");
+        const details = document.createElement("details");
+        details.className = `message-card ${roleClassMap[role] || "role-system"}`;
+        details.open = true;
+
+        const summary = document.createElement("summary");
+        const meta = document.createElement("div");
+        meta.className = "message-meta";
+
+        const rolePill = document.createElement("span");
+        rolePill.className = "role-pill";
+        rolePill.textContent = role;
+
+        const tokenPill = document.createElement("span");
+        tokenPill.className = "token-pill";
+        tokenPill.textContent = `tokens ${String(message.token_count ?? 0)}`;
+
+        meta.appendChild(rolePill);
+        meta.appendChild(tokenPill);
+
+        const indexPill = document.createElement("span");
+        indexPill.className = "token-pill";
+        indexPill.textContent = `#${index + 1}`;
+
+        summary.appendChild(meta);
+        summary.appendChild(indexPill);
+
+        const content = document.createElement("div");
+        content.className = "message-content";
+        const pre = document.createElement("pre");
+        pre.textContent = String(message.content ?? "");
+        content.appendChild(pre);
+
+        details.appendChild(summary);
+        details.appendChild(content);
+        return details;
+      }
+
+      function createPill(label, mode = "") {
+        const pill = document.createElement("div");
+        pill.className = `pill ${mode}`.trim();
+        pill.textContent = label;
+        return pill;
+      }
+
+      function createKeyValueItem(key, value) {
+        const item = document.createElement("div");
+        item.className = "kv-item";
+        const keyEl = document.createElement("div");
+        keyEl.className = "kv-key";
+        keyEl.textContent = key;
+        const valueEl = document.createElement("div");
+        valueEl.className = "kv-value mono";
+        valueEl.textContent = value;
+        item.appendChild(keyEl);
+        item.appendChild(valueEl);
+        return item;
+      }
+
+      function createFileItem(label, path) {
+        const item = document.createElement("div");
+        item.className = "file-item";
+        const labelEl = document.createElement("div");
+        labelEl.className = "file-label";
+        labelEl.textContent = label;
+        const pathEl = document.createElement("div");
+        pathEl.className = "file-path mono";
+        pathEl.textContent = path;
+        item.appendChild(labelEl);
+        item.appendChild(pathEl);
+        return item;
+      }
+
+      function renderMainEmpty(message) {
+        mainPanel.innerHTML = "";
+        const empty = document.createElement("div");
+        empty.className = "empty-state";
+        empty.innerHTML = `<strong>No artifact selected</strong>${escapeHtml(message)}`;
+        mainPanel.appendChild(empty);
+      }
+
+      function mountPanel(panel) {
+        mainPanel.innerHTML = "";
+        mainPanel.className = "";
+        mainPanel.appendChild(panel);
+      }
+
+      function countComponentDetailFiles() {
+        if (!state.manifest) {
+          return 0;
+        }
+        let count = 0;
+        for (const map of state.manifest.componentDetailPaths.values()) {
+          count += map.size;
+        }
+        return count;
+      }
+
+      function buildInstanceLabel(instanceId) {
+        const traj = state.trajByInstance.get(instanceId);
+        if (!traj) {
+          return instanceId;
+        }
+        const failRatio = formatMaybeNumber(traj.fail_ratio);
+        return `${instanceId} | fail_ratio=${failRatio}`;
+      }
+
+      function getSelectedTrajectory() {
+        return state.trajByInstance.get(state.selectedInstanceId) || null;
+      }
+
+      function getComponentPathMap(instanceId) {
+        if (!state.manifest || !instanceId) {
+          return new Map();
+        }
+        return state.manifest.componentDetailPaths.get(instanceId) || new Map();
+      }
+
+      function getNameQueryDetailPath(instanceId) {
+        if (!state.manifest || !instanceId) {
+          return "";
+        }
+        return state.manifest.nameQueryDetailPaths.get(instanceId) || "";
+      }
+
+      function getDefaultFallbackDetailPath(instanceId) {
+        if (!state.manifest || !instanceId) {
+          return "";
+        }
+        return state.manifest.defaultFallbackDetailPaths.get(instanceId) || "";
+      }
+
+      function getSubAgentPathMap(instanceId) {
+        if (!state.manifest || !instanceId) {
+          return new Map();
+        }
+        return state.manifest.subAgentDetailPaths.get(instanceId) || new Map();
+      }
+
+      function extractInstanceId(record) {
+        if (!record || typeof record !== "object") {
+          return "";
+        }
+        return String(
+          record.instance_id ||
+          record.extra_info?.instance_id ||
+          ""
+        ).trim();
+      }
+
+      function extractGroundTruth(record) {
+        if (!record || typeof record !== "object") {
+          return [];
+        }
+        if (Array.isArray(record.ground_truth)) {
+          return record.ground_truth;
+        }
+        if (Array.isArray(record.reward_model?.ground_truth)) {
+          return record.reward_model.ground_truth;
+        }
+        return [];
+      }
+
+      function formatGroundTruth(value) {
+        if (Array.isArray(value)) {
+          return value.length ? value.join("\n") : "-";
+        }
+        if (value == null || value === "") {
+          return "-";
+        }
+        return String(value);
+      }
+
+      function sumMessageTokens(messages, role = "") {
+        return messages.reduce((sum, message) => {
+          if (role && String(message.role || "") !== role) {
+            return sum;
+          }
+          const tokenCount = Number(message.token_count || 0);
+          return sum + (Number.isFinite(tokenCount) ? tokenCount : 0);
+        }, 0);
+      }
+
+      function extractTraceLocs(messages) {
+        for (let index = messages.length - 1; index >= 0; index -= 1) {
+          const message = messages[index];
+          if (String(message.role || "") !== "assistant") {
+            continue;
+          }
+          const content = String(message.content || "");
+          const match = content.match(/<trace_locs>([\s\S]*?)<\/trace_locs>/i);
+          if (match) {
+            return match[1].trim();
+          }
+        }
+        return "";
+      }
+
+      function summarizeArgs(args) {
+        const preferredKeys = [
+          "run_name",
+          "model_name",
+          "model_backend",
+          "search_mode",
+          "component_graph_dir",
+          "component_summary_dir",
+          "bfs_component_search_strategy",
+          "bfs_component_parallelism",
+          "bfs_max_components_to_check",
+          "max_turns",
+          "max_tokens",
+        ];
+        const rows = [];
+        preferredKeys.forEach((key) => {
+          if (Object.prototype.hasOwnProperty.call(args, key)) {
+            rows.push({ key, value: formatCellValue(args[key]) });
+          }
+        });
+        return rows;
+      }
+
+      function summarizeComponentSummaryPayload(payload) {
+        const components = payload && typeof payload === "object" && payload.components && typeof payload.components === "object"
+          ? Object.values(payload.components)
+          : [];
+        return components
+          .map((component) => ({
+            component_id: String(component.component_id || "-"),
+            checked_nodes: String(Array.isArray(component.checked_node_ids) ? component.checked_node_ids.length : 0),
+            total_nodes: String(Array.isArray(component.node_ids) ? component.node_ids.length : 0),
+            summary_available: component.functionality_summary ? "yes" : "no",
+            functionality_summary: String(component.functionality_summary || "-"),
+          }))
+          .sort((left, right) => left.component_id.localeCompare(right.component_id));
+      }
+
+      function formatArray(value) {
+        if (!Array.isArray(value) || !value.length) {
+          return "-";
+        }
+        return value.map((item) => String(item)).join(" | ");
+      }
+
+      function formatLikelyLocations(value) {
+        if (!Array.isArray(value) || !value.length) {
+          return "-";
+        }
+        return value
+          .map((item) => {
+            if (!item || typeof item !== "object") {
+              return String(item);
+            }
+            return String(item.node_id || item.reason || JSON.stringify(item));
+          })
+          .slice(0, 4)
+          .join(" | ");
+      }
+
+      function formatCellValue(value) {
+        if (value == null) {
+          return "-";
+        }
+        if (Array.isArray(value)) {
+          return value.length ? value.join(" | ") : "-";
+        }
+        if (typeof value === "object") {
+          return JSON.stringify(value);
+        }
+        return String(value);
+      }
+
+      function formatMaybeNumber(value) {
+        const number = Number(value);
+        return Number.isFinite(number) ? number.toFixed(4) : "-";
+      }
+
+      function inferPrimarySearchMode() {
+        const modes = new Set();
+        state.trajs.forEach((traj) => {
+          const searchMode = String(traj.search_mode || "").trim();
+          if (searchMode) {
+            modes.add(searchMode);
+          }
+        });
+        return modes.size === 1 ? Array.from(modes)[0] : "";
+      }
+
+      function basename(path) {
+        return String(path || "").split("/").filter(Boolean).pop() || path;
+      }
+
+      function inferFileType(path) {
+        if (path.endsWith(".jsonl")) {
+          return "JSONL";
+        }
+        if (path.endsWith(".json")) {
+          return "JSON";
+        }
+        return "text";
+      }
+
+      function tryPrettyJson(text) {
+        try {
+          return JSON.stringify(JSON.parse(text), null, 2);
+        } catch {
+          return null;
+        }
+      }
+
+      function formatBytes(size) {
+        const number = Number(size);
+        if (!Number.isFinite(number) || number <= 0) {
+          return "0 B";
+        }
+        const units = ["B", "KB", "MB", "GB"];
+        let value = number;
+        let unitIndex = 0;
+        while (value >= 1024 && unitIndex < units.length - 1) {
+          value /= 1024;
+          unitIndex += 1;
+        }
+        return `${value.toFixed(value >= 100 || unitIndex === 0 ? 0 : 1)} ${units[unitIndex]}`;
+      }
+
+      function escapeHtml(value) {
+        return String(value)
+          .replaceAll("&", "&amp;")
+          .replaceAll("<", "&lt;")
+          .replaceAll(">", "&gt;")
+          .replaceAll('"', "&quot;")
+          .replaceAll("'", "&#39;");
+      }
+
+      function showError(message) {
+        errorBox.textContent = message;
+        errorBox.style.display = "block";
+      }
+
+      function clearError() {
+        errorBox.textContent = "";
+        errorBox.style.display = "none";
+      }
+    </script>
+  </body>
+</html>

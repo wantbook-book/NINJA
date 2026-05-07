@@ -1,0 +1,124 @@
+<pr_description>
+Consider the following PR description:
+$problem_statement
+</pr_description>
+
+<repo_structure>
+The repository directory structure is as follows:
+$repo_structure
+</repo_structure>
+
+<instructions>
+# Task Instructions
+
+## Overview
+You are localizing the root cause of a reported issue in a code repository.
+Use repository search tools to discover promising files, then use code-inspection
+and call-graph tools directly in the same context to identify suspicious
+functions/methods.
+
+For each response:
+
+1. Include a `<think>` section explaining the next action.
+2. If you need more information, provide one or more `<tool_call>` blocks.
+3. If you are ready to finish, provide a `<result>` block and an `exit` tool call.
+
+## Recommended Workflow
+1. Analyze the issue description to extract keywords and likely modules.
+2. Use `find_files_by_content` and `find_files_by_name` to find relevant files.
+3. Inspect promising files with `get_file_functions`, `get_file_classes`,
+   `get_code_of_function`, and `get_code_of_class_method`.
+4. Use `get_callers` and `get_callees` to trace related functions.
+5. Return function-level suspicious locations when the evidence is sufficient.
+
+<IMPORTANT>
+- Final locations must be function-level module functions or class methods.
+- Focus on root-cause locations, not only surface symptoms.
+- Return at least 5 suspicious locations when possible.
+</IMPORTANT>
+
+## Allowed Response Formats
+
+You must choose exactly one format in each response.
+
+### Format A: Continue searching
+Use this format only when you still need more information.
+
+<think>
+...
+</think>
+<tool_call>
+{"name": "...", "arguments": {...}}
+</tool_call>
+
+You may include multiple <tool_call> blocks.
+Do not include <result> in this format.
+
+### Format B: Finish the search
+Use this format only when you are ready to stop searching.
+Include at least 5 suspicious locations when possible.
+
+<think>
+...
+</think>
+<result>
+{
+  "suspicious": [
+    {"location": "file_path:function_name", "reason": "why this location is suspicious"},
+    {"location": "file_path:ClassName.method_name", "reason": "why this location is suspicious"}
+  ]
+}
+</result>
+<tool_call>
+{"name": "exit", "arguments": {}}
+</tool_call>
+
+Do not include any non-exit tool call in this format.
+
+The `location` format must be:
+- `file_path:function_name` for module-level functions
+- `file_path:ClassName.method_name` for class methods
+
+## Examples of CORRECT Responses
+
+<example_response>
+<think>
+The issue mentions timeout handling in HTTP requests. I should search for files that contain timeout-related logic.
+</think>
+<tool_call>
+{"name": "find_files_by_content", "arguments": {"keywords": ["timeout", "request timeout"], "file_pattern": "*.py"}}
+</tool_call>
+</example_response>
+
+<example_response>
+<think>
+The search found an HTTP client file. I should inspect its functions and classes before selecting specific implementations to review.
+</think>
+<tool_call>
+{"name": "get_file_functions", "arguments": {"file_name": "src/client/http.py"}}
+</tool_call>
+<tool_call>
+{"name": "get_file_classes", "arguments": {"file_name": "src/client/http.py"}}
+</tool_call>
+</example_response>
+
+<example_response>
+<think>
+The `send_request` method handles the timeout path described in the issue, and the call graph shows several related configuration and retry functions. I have enough evidence to report suspicious locations.
+</think>
+<result>
+{
+  "suspicious": [
+    {"location": "src/client/http.py:HttpClient.send_request", "reason": "Timeout is not forwarded to the transport when retry handling is enabled"},
+    {"location": "src/client/http.py:HttpClient._prepare_request", "reason": "Builds request options without preserving the caller-provided timeout"},
+    {"location": "src/client/retry.py:RetryPolicy.execute", "reason": "Recreates request options for each retry and overwrites timeout with a default value"},
+    {"location": "src/config/settings.py:load_timeout_config", "reason": "Returns None when the timeout key is absent instead of applying the configured default"},
+    {"location": "src/client/session.py:Session.request", "reason": "Calls HttpClient without passing the session-level timeout value"}
+  ]
+}
+</result>
+<tool_call>
+{"name": "exit", "arguments": {}}
+</tool_call>
+</example_response>
+</instructions>

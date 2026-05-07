@@ -1,0 +1,14 @@
+You have finished the BFS-guided inspection.
+
+Based on the merged chain summaries, provide the top-5 most likely culprit locations.
+
+Return only the final ranked locations inside <trace_locs></trace_locs>.
+
+Format:
+<trace_locs>
+path/to/file.py
+function: ClassName.method_name
+
+path/to/another_file.py
+function: function_name
+</trace_locs>

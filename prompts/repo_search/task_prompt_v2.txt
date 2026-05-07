@@ -1,0 +1,123 @@
+<pr_description>
+Consider the following PR description:
+{problem_statement}
+</pr_description>
+
+<repository_structure>
+The repository directory structure is as follows:
+{structure}
+</repository_structure>
+
+<instructions>
+# Task Instructions
+
+## Overview
+You are localizing the issue within the current repository.
+Use the repository structure and the available tools to inspect files, classes, methods, and module-level functions.
+Return the top 5 most likely culprit locations in the repository.
+For final localization, function-level means either a module-level function or a class method.
+Do not stop at a bare class name.
+
+For each response:
+
+1. Include exactly one `<think>` section explaining your reasoning and what you are trying to verify.
+2. If you still need more information, provide one or more `<tool_call>` blocks to execute.
+3. If you are ready to finish, provide `<trace_locs>` and also include an `exit()` tool call in the same response.
+
+## Recommended Workflow
+1. Start from file names, class names, function names, API names, error messages, and execution-flow clues explicitly mentioned in the issue.
+2. Use the repository structure to infer which files are most likely related, even when the issue does not name the exact file.
+3. Inspect file-level functions or classes first, then drill down into the most suspicious methods or functions.
+4. Follow the most relevant caller-callee relationships, validation paths, parsing logic, state transitions, and data transformations related to the issue.
+5. Refine the ranking as you gather evidence and keep the final list focused on the most actionable locations.
+6. If a class seems suspicious, continue searching until you can name the specific method(s) inside that class. Only fall back to a file-only location when function-level evidence is still unavailable.
+
+<IMPORTANT>
+- Each response must contain exactly one `<think>` block.
+- The `<think>` block must appear before any `<tool_call>` block.
+- Do not output a second `<think>` block in the same response.
+- The final response must include a `<trace_locs>` block and an `exit()` tool call in the same response.
+- Return at most 5 ranked location blocks inside `<trace_locs>`.
+- Final locations should be at file-level or function-level granularity. Function-level means a module-level function or a class method.
+- Do not use `class:` as a final location type inside `<trace_locs>`.
+- Do not invent line numbers. Include them only when they are verified from inspected code.
+- If the issue likely involves new behavior rather than a single bug, return the files, classes, and functions most likely to require modification.
+</IMPORTANT>
+
+## Allowed Response Formats
+
+You must choose exactly one format in each response.
+
+### Format A: Continue searching
+Use this format only when you still need more information.
+
+<think>
+...
+</think>
+<tool_call>
+{{"name": "...", "arguments": {{...}}}}
+</tool_call>
+
+You may include multiple <tool_call> blocks.
+Use exactly one `<think>` block for the whole response.
+Do not include <trace_locs> in this format.
+
+### Format B: Finish the search
+Use this format only when you are ready to stop searching.
+
+<think>
+...
+</think>
+<trace_locs>
+path/to/file.py
+function: Foo.bar
+
+path/to/other.py
+function: helper_fn
+</trace_locs>
+<tool_call>
+{{"name": "exit", "arguments": {{}}}}
+</tool_call>
+
+Use exactly one `<think>` block for the whole response.
+Do not include any non-exit tool call in this format.
+
+## `<trace_locs>` Format
+
+Inside `<trace_locs>`, list up to 5 ranked location blocks.
+Each block should contain a repository-relative file path, followed by an optional `function:` line and optional verified line information.
+Separate blocks with a blank line.
+
+Example block:
+
+path/to/file.py
+function: MyClass.my_method
+line: 120-145
+
+## Examples of CORRECT responses
+<example_response>
+<think>
+The issue points to request parsing, but the exact function is unclear. I should inspect the file-level classes in the most likely parser module first.
+</think>
+<tool_call>
+{{"name": "get_file_classes", "arguments": {{"file_name": "pkg/parser.py"}}}}
+</tool_call>
+</example_response>
+
+<example_response>
+<think>
+The inspected code shows the normalization bug is implemented in `RequestParser.parse`, and the surrounding validator is also likely relevant. I can now return the final ranked result.
+</think>
+<trace_locs>
+pkg/parser.py
+function: RequestParser.parse
+
+pkg/validation.py
+function: validate_request
+</trace_locs>
+<tool_call>
+{{"name": "exit", "arguments": {{}}}}
+</tool_call>
+</example_response>
+
+</instructions>

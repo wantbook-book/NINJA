@@ -1,0 +1,21 @@
+Finish the exploration now. Based on the available information, reconfirm and provide at least 3 edit locations and at least 3 support locations in the result.
+Final locations must be at function-level granularity: a module-level function or a class method.
+
+- Edit locations: functions/methods that the fix directly modifies.
+- Support locations: functions/methods that provide essential context but are NOT directly edited.
+
+Do not call any tools in this final response.
+
+Since your answer will be processed automatically, please give your answer in the example format as follows.
+<result>
+{
+  "edit_locations": [
+    {"location": "file_path:function_name", "reason": "why this function needs to be changed to fix the issue"},
+    {"location": "file_path:ClassName.method_name", "reason": "why this method needs to be changed"}
+  ],
+  "support_locations": [
+    {"location": "file_path:function_name", "reason": "why reading this helps understand the issue without changing it"},
+    {"location": "file_path:ClassName.method_name", "reason": "why this provides essential context"}
+  ]
+}
+</result>

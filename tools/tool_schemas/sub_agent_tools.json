@@ -1,0 +1,145 @@
+[
+  {
+    "type": "function",
+    "function": {
+      "name": "get_methods_of_class",
+      "description": "Get all method signatures defined in the specified class. Use this to understand what methods a class contains before inspecting one in detail.",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "file_name": {
+            "type": "string",
+            "description": "The full file path (e.g., 'django/db/models/query.py')"
+          },
+          "class_name": {
+            "type": "string",
+            "description": "The class name (e.g., 'QuerySet')"
+          }
+        },
+        "required": ["file_name", "class_name"]
+      }
+    }
+  },
+  {
+    "type": "function",
+    "function": {
+      "name": "get_file_functions",
+      "description": "Get all module-level function signatures in the specified file. Use this to understand what functions a file contains.",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "file_name": {
+            "type": "string",
+            "description": "The full file path (e.g., 'django/db/models/query.py')"
+          }
+        },
+        "required": ["file_name"]
+      }
+    }
+  },
+  {
+    "type": "function",
+    "function": {
+      "name": "get_file_classes",
+      "description": "Get all class signatures in the specified file. Use this to understand what classes a file contains.",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "file_name": {
+            "type": "string",
+            "description": "The full file path (e.g., 'django/db/models/query.py')"
+          }
+        },
+        "required": ["file_name"]
+      }
+    }
+  },
+  {
+    "type": "function",
+    "function": {
+      "name": "get_code_of_function",
+      "description": "Get the source code implementation of a specific module-level function in a file.",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "file_name": {
+            "type": "string",
+            "description": "The full file path"
+          },
+          "func_name": {
+            "type": "string",
+            "description": "The function name"
+          }
+        },
+        "required": ["file_name", "func_name"]
+      }
+    }
+  },
+  {
+    "type": "function",
+    "function": {
+      "name": "get_code_of_class_method",
+      "description": "Get the source code implementation of a specific method within a class.",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "file_name": {
+            "type": "string",
+            "description": "The full file path"
+          },
+          "class_name": {
+            "type": "string",
+            "description": "The class name"
+          },
+          "func_name": {
+            "type": "string",
+            "description": "The method name"
+          }
+        },
+        "required": ["file_name", "class_name", "func_name"]
+      }
+    }
+  },
+  {
+    "type": "function",
+    "function": {
+      "name": "get_callers",
+      "description": "Get a list of functions that call the specified function. Returns callers in the format 'file:function' or 'file:Class.method'. Use this to trace how a function is used and find upstream callers.",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "location": {
+            "type": "string",
+            "description": "The function location in format 'file_path:function_name' or 'file_path:ClassName.method_name'"
+          }
+        },
+        "required": ["location"]
+      }
+    }
+  },
+  {
+    "type": "function",
+    "function": {
+      "name": "get_callees",
+      "description": "Get a list of functions that are called by the specified function. Returns callees in the format 'file:function' or 'file:Class.method'. Use this to trace what a function depends on and find downstream callees.",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "location": {
+            "type": "string",
+            "description": "The function location in format 'file_path:function_name' or 'file_path:ClassName.method_name'"
+          }
+        },
+        "required": ["location"]
+      }
+    }
+  },
+  {
+    "type": "function",
+    "function": {
+      "name": "exit",
+      "description": "Call this when you have finished exploring and are ready to return your findings.",
+      "parameters": {}
+    }
+  }
+]

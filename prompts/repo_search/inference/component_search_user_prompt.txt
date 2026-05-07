@@ -1,0 +1,109 @@
+<pr_description>
+Consider the following PR description:
+$problem_statement
+</pr_description>
+
+<component_search_context>
+Component ID: $component_id
+Component search order: $component_search_order
+$group_context_block$name_query_block
+</component_search_context>
+
+<component_graph>
+$component_graph_text
+</component_graph>
+
+<instructions>
+# Task Instructions
+
+## Overview
+You are inspecting one repository component graph at a time to localize the issue.
+Use tools when needed to inspect code for nodes in the current component graph.
+Restrict all returned locations to this component graph only.
+For final localization, function-level means either a module-level function or a class method.
+Do not stop at a bare file or class name.
+
+For each response:
+
+1. Include a `<think>` section explaining your reasoning and what you are trying to accomplish.
+2. If you still need more information, provide one or more `<tool_call>` blocks to execute.
+3. If you are ready to finish this component, provide `<trace_locs>` and also include an `exit()` tool call in the same response.
+
+## Recommended Workflow
+1. If suspicious file, class, or function names from earlier planning belong to the current component graph, use them first to focus on the most relevant nodes and paths.
+2. Otherwise, start from the representative entry and source entries, then follow the component call relations toward the most issue-relevant paths.
+3. Inspect the most promising nodes before broadening to adjacent nodes in the same component graph.
+4. When confident, return the final localization result for this component. If the component appears unrelated, return an empty result.
+5. If a file or class looks suspicious, keep inspecting until you can name the specific function or method inside it.
+
+<IMPORTANT>
+- If no relevant location exists in this component, return:
+<trace_locs>
+</trace_locs>
+- The final response should still include the `exit()` tool call even when `<trace_locs>` is empty.
+- Do not return locations outside this component graph.
+- Final locations must be at function-level granularity. Function-level means a module-level function or a class method.
+- Every non-empty location block must include a `function:` line.
+- Do not use `class:` as a final location type inside `<trace_locs>`.
+</IMPORTANT>
+
+## Allowed Response Formats
+
+You must choose exactly one format in each response.
+
+### Format A: Continue searching
+Use this format only when you still need more information.
+
+<think>
+...
+</think>
+<tool_call>
+{"name": "...", "arguments": {...}}
+</tool_call>
+
+You may include multiple <tool_call> blocks.
+Do not include <trace_locs> in this format.
+
+### Format B: Finish this component
+Use this format only when you are ready to stop searching this component.
+
+<think>
+...
+</think>
+<trace_locs>
+path/to/file.py
+function: Foo.bar
+
+path/to/other.py
+function: helper_fn
+</trace_locs>
+<tool_call>
+{"name": "exit", "arguments": {}}
+</tool_call>
+
+Do not include any non-exit tool call in this format.
+
+## Examples of CORRECT responses
+<example_response>
+<think>
+The suspicious function name points to `Handler.run`, so I should inspect that implementation first before exploring other nodes in this component graph.
+</think>
+<tool_call>
+{"name": "get_code_of_file_function", "arguments": {"file_name": "pkg/module.py", "func_name": "run"}}
+</tool_call>
+</example_response>
+
+<example_response>
+<think>
+The inspected code matches the issue behavior, so I can now return the final location for this component graph.
+</think>
+<trace_locs>
+pkg/module.py
+function: Handler.run
+</trace_locs>
+<tool_call>
+{"name": "exit", "arguments": {}}
+</tool_call>
+</example_response>
+
+</instructions>

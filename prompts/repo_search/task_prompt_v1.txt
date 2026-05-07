@@ -1,0 +1,12 @@
+The bug report is as follows:
+```
+### GitHub Problem Description ###
+{problem_statement}
+
+###
+
+### Candidate Files ###
+{structure}
+
+###
+```

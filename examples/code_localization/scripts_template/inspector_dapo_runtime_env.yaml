@@ -1,0 +1,47 @@
+# Runtime environment for Inspector DAPO training.
+#
+# Usage:
+#   RAY_ADDRESS='http://<head_ip>:8265' RAY_OVERRIDE_JOB_RUNTIME_ENV=1 \
+#   ray job submit --no-wait --working-dir . \
+#       --runtime-env examples/code_localization/scripts_template/inspector_dapo_runtime_env.yaml \
+#       -- bash examples/code_localization/scripts_template/run_train_inspector_dapo.sh
+
+env_vars:
+  # ---- Infrastructure ----
+  VLLM_USE_V1: "1"
+  NCCL_SOCKET_IFNAME: "storage_bond"
+  NCCL_DEBUG: "WARN"
+
+  # ---- SwanLab (fill in before submitting) ----
+  SWANLAB_API_KEY: ""
+  SWANLAB_MODE: "cloud"
+  SWANLAB_LOG_DIR: "/path/to/code_agent/outputs/inspector_dapo/swanlog"
+
+  # ---- MLflow ----
+  MLFLOW_TRACKING_URI: "sqlite:////path/to/code_agent/outputs/inspector_dapo/mlruns.db"
+
+  # ---- Checkpoint / trajectory output (absolute path — avoids saving into Ray /tmp working dir) ----
+  CKPTS_DIR: "/path/to/code_agent/outputs/inspector_dapo/checkpoints"
+  TRAJECTORY_SAVE_DIR: "/path/to/code_agent/outputs/inspector_dapo/trajectories"
+
+  # ---- Tool index paths ----
+  PROJECT_FILE_LOC: "/path/to/code_agent/index_data/swe_smith_py/strucs"
+  GRAPH_INDEX_DIR: "/path/to/code_agent/index_data/SWE-smith-py/graph_index_v2.3"
+
+excludes:
+  - ".git"
+  - "*.whl"
+  - "__pycache__"
+  - "*.pyc"
+  - "*.pyo"
+  - "checkpoints"
+  - "mlflow_outputs"
+  - "outputs"
+  - "eval_outputs"
+  - "evaluation/outputs"
+  - "index_data"
+  - "baselines"
+  - "validation_dir"
+  - "swanlog"
+  - "rollout_dir"
+  - "playground"

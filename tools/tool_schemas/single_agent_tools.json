@@ -1,0 +1,185 @@
+[
+  {
+    "type": "function",
+    "function": {
+      "name": "find_files_by_content",
+      "description": "Search for one or more keywords or regex patterns in repository file contents. Returns a deduplicated file list containing any matching content, along with matching line snippets. Use this to find files related to specific functionality, error messages, class names, or function names mentioned in the issue. Each keyword is matched as a regular expression (case-insensitive); plain keywords work as well.",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "keywords": {
+            "type": "array",
+            "items": {"type": "string"},
+            "description": "List of keywords or regex patterns to search for in file contents"
+          },
+          "file_pattern": {
+            "type": "string",
+            "description": "File glob pattern to filter which files to search (default: '*.py')"
+          }
+        },
+        "required": ["keywords"]
+      }
+    }
+  },
+  {
+    "type": "function",
+    "function": {
+      "name": "find_files_by_name",
+      "description": "Match files by one or more file name or path patterns in the repository. Returns a deduplicated file list matching any of the patterns. Use this to find files by name (e.g., 'models.py', 'views.py') or by path pattern (e.g., 'django/db/*.py').",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "patterns": {
+            "type": "array",
+            "items": {"type": "string"},
+            "description": "List of glob patterns to match file paths (e.g., ['**/models.py', 'django/db/*.py'])"
+          }
+        },
+        "required": ["patterns"]
+      }
+    }
+  },
+  {
+    "type": "function",
+    "function": {
+      "name": "get_methods_of_class",
+      "description": "Get all method signatures defined in the specified class. Use this to understand what methods a class contains before inspecting one in detail.",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "file_name": {
+            "type": "string",
+            "description": "The full file path (e.g., 'django/db/models/query.py')"
+          },
+          "class_name": {
+            "type": "string",
+            "description": "The class name (e.g., 'QuerySet')"
+          }
+        },
+        "required": ["file_name", "class_name"]
+      }
+    }
+  },
+  {
+    "type": "function",
+    "function": {
+      "name": "get_file_functions",
+      "description": "Get all module-level function signatures in the specified file. Use this to understand what functions a file contains.",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "file_name": {
+            "type": "string",
+            "description": "The full file path (e.g., 'django/db/models/query.py')"
+          }
+        },
+        "required": ["file_name"]
+      }
+    }
+  },
+  {
+    "type": "function",
+    "function": {
+      "name": "get_file_classes",
+      "description": "Get all class signatures in the specified file. Use this to understand what classes a file contains.",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "file_name": {
+            "type": "string",
+            "description": "The full file path (e.g., 'django/db/models/query.py')"
+          }
+        },
+        "required": ["file_name"]
+      }
+    }
+  },
+  {
+    "type": "function",
+    "function": {
+      "name": "get_code_of_function",
+      "description": "Get the source code implementation of a specific module-level function in a file.",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "file_name": {
+            "type": "string",
+            "description": "The full file path"
+          },
+          "func_name": {
+            "type": "string",
+            "description": "The function name"
+          }
+        },
+        "required": ["file_name", "func_name"]
+      }
+    }
+  },
+  {
+    "type": "function",
+    "function": {
+      "name": "get_code_of_class_method",
+      "description": "Get the source code implementation of a specific method within a class.",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "file_name": {
+            "type": "string",
+            "description": "The full file path"
+          },
+          "class_name": {
+            "type": "string",
+            "description": "The class name"
+          },
+          "func_name": {
+            "type": "string",
+            "description": "The method name"
+          }
+        },
+        "required": ["file_name", "class_name", "func_name"]
+      }
+    }
+  },
+  {
+    "type": "function",
+    "function": {
+      "name": "get_callers",
+      "description": "Get a list of functions that call the specified function. Returns callers in the format 'file:function' or 'file:Class.method'. Use this to trace how a function is used and find upstream callers.",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "location": {
+            "type": "string",
+            "description": "The function location in format 'file_path:function_name' or 'file_path:ClassName.method_name'"
+          }
+        },
+        "required": ["location"]
+      }
+    }
+  },
+  {
+    "type": "function",
+    "function": {
+      "name": "get_callees",
+      "description": "Get a list of functions that are called by the specified function. Returns callees in the format 'file:function' or 'file:Class.method'. Use this to trace what a function depends on and find downstream callees.",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "location": {
+            "type": "string",
+            "description": "The function location in format 'file_path:function_name' or 'file_path:ClassName.method_name'"
+          }
+        },
+        "required": ["location"]
+      }
+    }
+  },
+  {
+    "type": "function",
+    "function": {
+      "name": "exit",
+      "description": "Signal that the single-agent search is complete. Call this when you have identified sufficient suspicious locations or when no more productive exploration is possible.",
+      "parameters": {}
+    }
+  }
+]

@@ -1,0 +1,11 @@
+Finish the exploration now. Based on the available information, reconfirm and provide at least 5 suspicious locations in the result. Final locations must be at function-level granularity: a module-level function or a class method.
+
+Since your answer will be processed automatically, please give your answer in the exapmle format as follows.
+<result>
+{
+  "suspicious": [
+    {"location": "file_path:function_name", "reason": "why this location is suspicious"},
+    {"location": "file_path:ClassName.method_name", "reason": "why this location is suspicious"}
+  ]
+}
+</result>

@@ -1,0 +1,156 @@
+tools:
+  - class_name: "verl.tools.locagent_tool.RepoSearchCodeSnippetsTool"
+    config:
+      type: native
+    tool_schema:
+      type: "function"
+      function:
+        name: "search_code_snippets"
+        description: |
+          Searches the codebase to retrieve relevant code snippets based on given queries(terms or line numbers).
+          This function supports retrieving the complete content of a code entity, searching for code entities such as
+          classes or functions by keywords, or locating specific lines within a file. It also supports filtering searches
+          based on a file path or file pattern.
+
+          Note:
+          1. If `search_terms` are provided, it searches for code snippets based on each term:
+            - If a term is formatted as 'file_path:QualifiedName' (e.g., 'src/helpers/math_helpers.py:MathUtils.calculate_sum'),
+              or just 'file_path', the corresponding complete code is retrieved or file content is retrieved.
+            - If a term matches a file, class, or function name, matched entities are retrieved.
+            - If there is no match with any module name, it attempts to find code snippets that likely contain the term.
+
+          2. If `line_nums` is provided, it searches for code snippets at the specified lines within the file defined by
+          `file_path_or_pattern`.
+
+          Example Usage:
+            # Search for the full content of a specific file
+            search_code_snippets(search_terms=['src/my_file.py'])
+
+            # Search for a specific function
+            search_code_snippets(search_terms=['src/my_file.py:MyClass.func_name'])
+
+            # Search for specific lines (10 and 15)
+            search_code_snippets(line_nums=[10, 15], file_path_or_pattern='src/example.py')
+
+            # Combined search
+            search_code_snippets(search_terms=['MyClass'], file_path_or_pattern='src/**/*.py')
+        parameters:
+          type: "object"
+          properties:
+            search_terms:
+              type: "array"
+              description: |
+                A list of names, keywords, or code snippets to search for within the codebase. 
+                Terms can be formatted as 'file_path:QualifiedName' to search for a specific module or entity within a file 
+                (e.g., 'src/helpers/math_helpers.py:MathUtils.calculate_sum') or as 'file_path' to retrieve the complete content 
+                of a file. This can also include potential function names, class names, or general code fragments.
+            line_nums:
+              type: "array"
+              description: |
+                Specific line numbers to locate code snippets within a specified file. 
+                When provided, `file_path_or_pattern` must specify a valid file path.
+            file_path_or_pattern:
+              type: "string"
+              description: |
+                A glob pattern or specific file path used to filter search results 
+                to particular files or directories. Defaults to '**/*.py', meaning all Python files are searched by default. 
+                If `line_nums` are provided, this must specify a specific file path.
+          required: []
+
+  - class_name: "verl.tools.locagent_tool.RepoGetEntityContentsTool"
+    config:
+      type: native
+    tool_schema:
+      type: "function"
+      function:
+        name: "get_entity_contents"
+        description: |
+          This function supports retrieving the complete content of a code entity, 
+          searching for code entities such as classes or functions by keywords, or locating specific lines within a file. 
+          It also supports filtering searches based on a file path or file pattern.
+        parameters:
+          type: "object"
+          properties:
+            entity_names:
+              type: "array"
+              description: "List of entity names like 'path/to/file.py' or 'path/to/file.py:Class.func'."
+          required: ["entity_names"]
+
+  - class_name: "verl.tools.locagent_tool.RepoExploreTreeStructureTool"
+    config:
+      type: native
+    tool_schema:
+      type: "function"
+      function:
+        name: "explore_tree_structure"
+        description: |
+          Analyzes and displays the dependency structure around specified entities in a code graph.
+
+
+          This function searches and presents relationships and dependencies for the specified entities 
+          (such as classes, functions, files, or directories) in a code graph. 
+          It explores how the input entities relate to others, using defined types of dependencies, 
+          including 'contains', 'imports', 'invokes' and 'inherits'. 
+          The search can be controlled to traverse upstream (exploring dependencies that entities rely on) 
+          or downstream (exploring how entities impact others), with optional limits on traversal depth 
+          and filters for entity and dependency types.
+
+          Example Usage:
+          1. Exploring Outward Dependencies:
+             explore_tree_structure(
+                 start_entities=['src/module_a.py:ClassA'],
+                 direction='downstream',
+                 traversal_depth=2,
+                 entity_type_filter=['class', 'function'],
+                 dependency_type_filter=['invokes', 'imports']
+             )
+             This retrieves the dependencies of `ClassA` up to 2 levels deep, 
+          focusing only on classes and functions with 'invokes' and 'imports' relationships.
+
+          2. Exploring Inward Dependencies:
+             explore_tree_structure(
+                 start_entities=['src/module_b.py:FunctionY'],
+                 direction='upstream',
+                 traversal_depth=-1
+             )
+             This finds all entities that depend on `FunctionY` without restricting the traversal depth.
+
+          Notes:
+          * Traversal Control: The `traversal_depth` parameter specifies how deep the function should explore the graph.
+          * Filtering: Use `entity_type_filter` and `dependency_type_filter` to narrow down the scope of the search.
+          * Graph Context: The function operates on a pre-built code graph containing entities and dependencies.
+        parameters:
+          type: "object"
+          properties:
+            start_entities:
+              type: "array"
+              description: |
+                List of entities (e.g., class, function, file, or directory paths) to begin the search from. 
+                Entities representing classes or functions must be formatted as 'file_path:QualifiedName' 
+                (e.g., 'interface/C.py:C.method_a.inner_func'). 
+                For files or directories, provide only the file or directory path (e.g., 'src/module_a.py' or 'src/').
+            direction:
+              type: "string"
+              description: |
+                Direction of traversal in the code graph:
+                - 'upstream': Explore dependencies that the specified entities rely on (how they depend on others).
+                - 'downstream': Explore the effects or interactions of the specified entities on others (how others depend on them).
+                - 'both': Traversal in both directions.
+                Default is 'downstream'.
+              enum: ["downstream", "upstream", "both"]
+            traversal_depth:
+              type: "integer"
+              description: |
+                Maximum depth of traversal. A value of -1 indicates unlimited depth (subject to a maximum limit). 
+                Must be either -1 or a non-negative integer (>= 0). Default is 2.
+            entity_type_filter:
+              type: "array"
+              description: |
+                List of entity types (e.g., 'class', 'function', 'file', 'directory') to include in the traversal. 
+                If None, all entity types are included.
+            dependency_type_filter:
+              type: "array"
+              description: |
+                List of dependency types (e.g., 'contains', 'imports', 'invokes', 'inherits') to include in the traversal. 
+                If None, all dependency types are included.
+          required: ["start_entities"]

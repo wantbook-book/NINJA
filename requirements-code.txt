@@ -1,0 +1,11 @@
+networkx
+libcst
+pandas
+tqdm
+debugpy
+pytest
+swanlab
+matplotlib
+trl
+mlflow
+transformers>=4.56.2,<5.0.0

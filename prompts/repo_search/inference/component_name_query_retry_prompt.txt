@@ -1,0 +1,7 @@
+Return only one JSON object inside <component_name_query></component_name_query> tags now.
+Do not add any explanation or extra text outside the block.
+
+Example:
+<component_name_query>
+{"file_names": ["foo.py"], "class_names": ["Baz"], "function_names": ["bar"]}
+</component_name_query>

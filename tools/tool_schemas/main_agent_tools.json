@@ -1,0 +1,68 @@
+[
+  {
+    "type": "function",
+    "function": {
+      "name": "find_files_by_content",
+      "description": "Search for one or more keywords or regex patterns in repository file contents. Returns a deduplicated file list containing any matching content, along with matching line snippets. Use this to find files related to specific functionality, error messages, class names, or function names mentioned in the issue. Each keyword is matched as a regular expression (case-insensitive); plain keywords work as well.",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "keywords": {
+            "type": "array",
+            "items": {"type": "string"},
+            "description": "List of keywords or regex patterns to search for in file contents"
+          },
+          "file_pattern": {
+            "type": "string",
+            "description": "File glob pattern to filter which files to search (default: '*.py')"
+          }
+        },
+        "required": ["keywords"]
+      }
+    }
+  },
+  {
+    "type": "function",
+    "function": {
+      "name": "find_files_by_name",
+      "description": "Match files by one or more file name or path patterns in the repository. Returns a deduplicated file list matching any of the patterns. Use this to find files by name (e.g., 'models.py', 'views.py') or by path pattern (e.g., 'django/db/*.py').",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "patterns": {
+            "type": "array",
+            "items": {"type": "string"},
+            "description": "List of glob patterns to match file paths (e.g., ['**/models.py', 'django/db/*.py'])"
+          }
+        },
+        "required": ["patterns"]
+      }
+    }
+  },
+  {
+    "type": "function",
+    "function": {
+      "name": "dispatch",
+      "description": "Dispatch Sub Agents to explore the specified entry files in depth. Each entry file will be assigned to a Sub Agent that traces caller/callee relationships and identifies suspicious functions. The entries must be file paths from the pending entries queue.",
+      "parameters": {
+        "type": "object",
+        "properties": {
+          "entries": {
+            "type": "array",
+            "items": {"type": "string"},
+            "description": "List of file paths to dispatch Sub Agents to explore"
+          }
+        },
+        "required": ["entries"]
+      }
+    }
+  },
+  {
+    "type": "function",
+    "function": {
+      "name": "exit",
+      "description": "Signal that the search is complete. Call this when you believe the confirmed suspicious locations sufficiently cover all issue symptoms, or when no more productive exploration is possible.",
+      "parameters": {}
+    }
+  }
+]

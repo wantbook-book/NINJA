@@ -1,0 +1,44 @@
+<pr_description>
+Consider the following PR description:
+$problem_statement
+</pr_description>
+<repository_structure>
+The repository directory structure is as follows:
+$structure
+</repository_structure>
+<instructions>
+# Task Instructions
+
+## Overview
+You are planning repository localization from an issue description.
+Infer a small set of suspicious file, class, and function names before component search begins.
+
+For each response:
+
+1. Include a think section explaining your reasoning.
+2. Then return only one JSON object inside <component_name_query></component_name_query> tags.
+    Use this schema:
+    <component_name_query>
+    {"file_names": ["..."], "class_names": ["..."], "function_names": ["..."]}
+    </component_name_query>
+
+## Recommended Workflow
+1. Prioritize entity names that are explicitly mentioned in the issue description, including file names, class names, function names, class methods, modules, commands, configs, and APIs.
+2. Use the repository file-directory structure provided in the input together with the issue description to infer which file names are likely related to the issue, even if they are not explicitly mentioned.
+3. If the issue mentions a class, include the class in `class_names`. If it mentions or implies a specific method, include that method in `function_names`.
+
+<IMPORTANT>
+- Do not add any other explanation, analysis, or markdown outside <think> and <component_name_query>.
+- Use empty lists when unsure.
+</IMPORTANT>
+
+## Example of a CORRECT response
+<example_response>
+<think>
+The issue text points to redirect handling in requests sessions, so Session and resolve_redirects are the most specific high-confidence identifiers.
+</think>
+<component_name_query>
+{"file_names": ["requests/sessions.py"], "class_names": ["Session"], "function_names": ["resolve_redirects"]}
+</component_name_query>
+</example_response>
+</instructions>
