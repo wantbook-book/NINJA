@@ -5,19 +5,16 @@
 
 Official codebase for the paper **"NINJA: A Navigator-Inspector Joint Architecture for Context-Efficient Issue Localization"**.
 
-NINJA provides the data construction, supervised fine-tuning, reinforcement learning, inference, evaluation, and trajectory visualization pipeline for context-efficient issue localization. The training stack is built on [verl](https://github.com/verl-project/verl), while parts of the repository indexing, code graph, and localization utilities are adapted from [LocAgent](https://github.com/gersteinlab/LocAgent) and RepoSearcher-style code search tools.
+NINJA provides the data construction, supervised fine-tuning, reinforcement learning, inference, evaluation, and trajectory visualization pipeline for context-efficient issue localization. The training stack is built on [verl](https://github.com/verl-project/verl), while parts of the repository indexing, code graph, and localization utilities are adapted from [LocAgent](https://github.com/gersteinlab/LocAgent) and [RepoSearcher](https://github.com/Mizersy/RepoDeepSearch).
 
 <a id="overview"></a>
 ## 🧭 Overview
 
-NINJA targets repository-level issue localization, where an agent must identify the files, classes, functions, or methods that are most relevant to a natural-language issue report under limited context budgets.
+**Abstract:** Recent advances in agent-based methods have demonstrated strong promise for issue localization, a critical prerequisite to automated issue resolution.
+However, most existing agent-based methods rely on a single agent with a growing context, where long-context accumulation compresses reasoning space, while a flat exploration structure hinders the balance between file-level breadth and function-level depth.
+To address these limitations, we propose NINJA, a hierarchical navigator--inspector joint architecture for context-efficient issue localization. NINJA decomposes repository exploration into global navigation and local inspection: the navigator maintains the global search state, performs file-level search, and dispatches selected entry files, while inspectors independently conduct function-level exploration around the assigned files in separate contexts. Through multi-round interactions, inspectors return suspicious locations as feedback, and the navigator updates the global state to decide whether to continue exploration or finalize localization. This hierarchical design balances file-level breadth with function-level depth, while independent inspector contexts prevent local exploration traces from accumulating in a single growing context.
+Extensive experiments across multiple benchmarks and LLM backbones show that NINJA consistently outperforms competitive baselines. Furthermore, two-stage agentic fine-tuning strengthens both local exploration and global coordination, enabling the open-source Qwen3-Coder-30B-A3B-Instruct to surpass the strong closed-source Claude-Haiku-4.5 model.
 
-The system separates the task into two cooperating roles:
-
-- **Navigator**: searches across the repository, plans exploration, selects promising components, and coordinates the overall localization process.
-- **Inspector**: performs focused analysis inside selected files or code entities and returns fine-grained location hypotheses.
-
-This Navigator-Inspector design combines repository structure indexes, code graph dependencies, tool-based search, and multi-agent trajectories. The goal is to reduce unnecessary context consumption while preserving the fine-grained evidence needed for reliable issue localization.
 
 <a id="contents"></a>
 ## 📚 Contents
@@ -104,7 +101,7 @@ Evaluation uses edited locations extracted from patches as ground-truth location
 bash LocAgent/scripts_template/run_gen_oracle_locations.sh
 ```
 
-The extraction pipeline can also produce support locations. Support locations are useful for analysis and data construction, but they are not treated as ground-truth edited locations by default.
+The extraction pipeline can also produce support locations. Support locations are not treated as ground-truth locations for now.
 
 ### 🧾 SFT Data Construction
 
@@ -292,4 +289,4 @@ This repository is released under the [Apache-2.0 License](LICENSE). See [Notice
 
 - [verl](https://github.com/verl-project/verl) for the RL training framework.
 - [LocAgent](https://github.com/gersteinlab/LocAgent) for graph-guided localization utilities and data construction references.
-- RepoSearcher-style repository search utilities for structure-aware code search and tool implementation support.
+- [RepoSearcher](https://github.com/Mizersy/RepoDeepSearch) for structure-aware code search and tool implementation support.
