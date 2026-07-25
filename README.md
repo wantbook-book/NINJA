@@ -70,7 +70,7 @@ The tools `get_file_functions`, `get_file_classes`, `get_methods_of_class`, `get
 
 ```bash
 INPUT_FILE=/path/to/input.parquet \
-PLAYGROUND_DIR=/path/to/playground \
+PLAYGROUND_DIR=/path/to/repos \
 OUTPUT_DIR=/path/to/repo_strucs \
 bash tools/RepoSearch/scripts_template/run_get_repo_structure_batch.sh
 ```
