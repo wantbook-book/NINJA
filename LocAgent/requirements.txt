@@ -147,7 +147,7 @@ torch==2.5.1
 tornado==6.4.1
 tqdm==4.67.0
 traitlets==5.14.3
-tree-sitter==0.21.3
+tree-sitter==0.25.2
 tree-sitter-languages==1.10.2
 triton==3.1.0
 typing_extensions==4.12.2
